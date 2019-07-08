@@ -9,9 +9,11 @@ import numpy as np
 
 from scipy import io
 from PIL import Image
+import cv2
 
 import os
 import json
+
 
 dataset_dir = os.path.join('C:\Machine Learning Projects\OpenPose', 'Coco_Dataset')
 
@@ -36,77 +38,70 @@ total_val_data = len(val_dict['annotations'])
 
 print(val_dict['annotations'][3]['keypoints'])
 
-def display_im_keypoints(index):
+skeleton_limb_indices = [(3,5), (3,2), (2, 4), (7,6), (7,9), (9,11), (6,8),
+                         (8,10), (7,13), (6,12), (13,15), (12,14), (15,17),
+                         (14, 16), (13, 12)]
+
+def display_im_keypoints(index, skeleton_limb_indices):
     """
     Takes in the index of the image from the validation annotations,
     returns the keypoints from that image that are labeled and shows image
     with keypoints.
+    The keypoints are in the following format: (x, y, v)
+    v=0: not labeled, v=1: labeled but not visible, v=2: labeled and visible.
     """
     
     image_id = val_dict['annotations'][index]['image_id']
     
+    # Find the number of zeros to append before img_id
+    num_zeros = 12 - len(str(image_id))
+    zeros = '0' * num_zeros
+    image_name = zeros + str(image_id)
+    
+    print(image_name)
+    
     image_path = os.path.join(dataset_dir, 
                                 'val2017', 
-                                f"000000000{image_id}.jpg")
+                                f"{image_name}.jpg")
     
     keypoints = val_dict['annotations'][index]['keypoints']
     
-    filtered_keypoints = list()
+    arranged_keypoints = list()
     
-    for i in range(0, len(keypoints), 3):
-        if keypoints[i+2] != 0:
-            filtered_keypoints.append((keypoints[i], keypoints[i+1]))
-            
     img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+
+    # Group keypoints into a list of tuples. Each tuple has: (x, y, v)
+    for i in range(0, len(keypoints), 3):
+        arranged_keypoints.append((keypoints[i], keypoints[i+1], keypoints[i+2]))
     
-    if img is None:
-        print('None Image')
+    # Display points for joints that are visible.
+    for keypoint in arranged_keypoints:
+        if keypoint[2] != 0:
+            cv2.circle(img, (keypoint[0], keypoint[1]), 0, (0, 255, 255), 6)
     
-    count = 1
-    for keypoint in filtered_keypoints:
-        cv2.circle(img, keypoint, 0, (0, 255, 255), 8)
-        cv2.putText(img, str(count), keypoint, cv2.FONT_HERSHEY_PLAIN, 1,
-                    (0, 255, 255), 1, cv2.LINE_AA)        
-        count += 1
-        
-    for i in range(0, len(filtered_keypoints)-1, 2):
-        cv2.line(img, filtered_keypoints[i], filtered_keypoints[i+1], (0, 255, 255), 2)
-        
+    
+    # Draw limbs for the visible joints
+    # Note: 1 is subtracted because indices start from 0.
+    for joint_index in skeleton_limb_indices:
+        if arranged_keypoints[joint_index[0]-1][2] != 0:
+            if arranged_keypoints[joint_index[1]-1][2] != 0:
+                x1 = arranged_keypoints[joint_index[0]-1][0]
+                y1 = arranged_keypoints[joint_index[0]-1][1]
+                x2 = arranged_keypoints[joint_index[1]-1][0]
+                y2 = arranged_keypoints[joint_index[1]-1][1]
+                cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 4)
+
     cv2.imshow('image', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
-    return image_id, filtered_keypoints
+    return image_id, arranged_keypoints
     
-img_id, keypoints = display_im_keypoints(4875)
+for i in range(100, 120):
+    img_id, keypoints = display_im_keypoints(i, skeleton_limb_indices)
 
 index = None
 for i in range(len(val_dict['annotations'])):
     if val_dict['annotations'][i]['image_id'] == 785:
         index = i
         break
-    
-print(val_dict['annotations'][index])
-
-image_path = os.path.join(dataset_dir, 
-                                'val2017', 
-                                f"000000{val_dict['annotations'][10287]['image_id']}.jpg", )
-
-import cv2
-image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-
-# Draw KeyPoints
-cv2.circle(image, (142, 309), 3, (0, 255, 0), 1)
-cv2.circle(image, (177, 320), 3, (0, 255, 0), 1)
-cv2.circle(image, (191, 398), 3, (0, 255, 0), 1)
-cv2.circle(image, (237, 317), 3, (0, 255, 0), 1)
-cv2.circle(image, (233, 426), 3, (0, 255, 0), 1)
-cv2.circle(image, (306, 233), 3, (0, 255, 0), 1)
-cv2.circle(image, (92, 452), 3, (0, 255, 0), 1)
-cv2.circle(image, (123, 468), 3, (0, 255, 0), 1)
-cv2.circle(image, (251, 469), 3, (0, 255, 0), 1)
-cv2.circle(image, (162, 551), 3, (0, 255, 0), 1)
-
-cv2.imshow('image', image)
-cv2.waitKey(10000)
-cv2.destroyAllWindows()
