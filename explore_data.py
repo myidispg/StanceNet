@@ -7,7 +7,6 @@ Created on Sun Jul  7 17:31:55 2019
 
 import numpy as np
 
-from scipy import io
 from PIL import Image
 import cv2
 
@@ -17,32 +16,22 @@ import json
 
 dataset_dir = os.path.join('C:\Machine Learning Projects\OpenPose', 'Coco_Dataset')
 
-#mat = io.loadmat(os.path.join(dataset_dir, 'mpii_human_pose_v1_u12_1.mat'))
-#
-#release = mat['RELEASE']
-#
-#release['annolist'][0][0][0].shape
-#
-#print( type(release), release.shape)
-#
-#object1 = release[0,0]
-#print(object1._fieldnames)
-#print(object1.__dict__['annolist'])
-
 with open(os.path.join(dataset_dir,
                        'annotations', 'person_keypoints_val2017.json'), 'r') as JSON:
     val_dict = json.load(JSON)
 
+with open(os.path.join(dataset_dir,
+                       'annotations', 'person_keypoints_train2017.json'), 'r') as JSON:
+    train_dict = json.load(JSON)
 
-total_val_data = len(val_dict['annotations'])
-
-print(val_dict['annotations'][3]['keypoints'])
+print(f'The length of train annotations is: {len(train_dict["annotations"])}')
+print(f'The length of validation annotations is: {len(val_dict["annotations"])}')
 
 skeleton_limb_indices = [(3,5), (3,2), (2, 4), (7,6), (7,9), (9,11), (6,8),
                          (8,10), (7,13), (6,12), (13,15), (12,14), (15,17),
                          (14, 16), (13, 12)]
 
-def display_im_keypoints(index, skeleton_limb_indices):
+def display_im_keypoints(annotation_dict, index, skeleton_limb_indices, val=False):
     """
     Takes in the index of the image from the validation annotations,
     returns the keypoints from that image that are labeled and shows image
@@ -51,7 +40,7 @@ def display_im_keypoints(index, skeleton_limb_indices):
     v=0: not labeled, v=1: labeled but not visible, v=2: labeled and visible.
     """
     
-    image_id = val_dict['annotations'][index]['image_id']
+    image_id = annotation_dict['annotations'][index]['image_id']
     
     # Find the number of zeros to append before img_id
     num_zeros = 12 - len(str(image_id))
@@ -60,11 +49,16 @@ def display_im_keypoints(index, skeleton_limb_indices):
     
     print(image_name)
     
-    image_path = os.path.join(dataset_dir, 
-                                'val2017', 
-                                f"{image_name}.jpg")
+    if val:
+        image_path = os.path.join(dataset_dir, 
+                                    'val2017', 
+                                    f"{image_name}.jpg")
+    else:
+        image_path = os.path.join(dataset_dir,
+                                  'train2017',
+                                  f"{image_name}.jpg")
     
-    keypoints = val_dict['annotations'][index]['keypoints']
+    keypoints = annotation_dict['annotations'][index]['keypoints']
     
     arranged_keypoints = list()
     
@@ -97,8 +91,8 @@ def display_im_keypoints(index, skeleton_limb_indices):
     
     return image_id, arranged_keypoints
     
-for i in range(100, 120):
-    img_id, keypoints = display_im_keypoints(i, skeleton_limb_indices)
+for i in range(0, 10):
+    img_id, keypoints = display_im_keypoints(train_dict, i, skeleton_limb_indices)
 
 index = None
 for i in range(len(val_dict['annotations'])):

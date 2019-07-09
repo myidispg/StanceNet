@@ -2,3 +2,4 @@
 *.mat
 Coco_Dataset/*
 MPII_Dataset/*
+*.zip
