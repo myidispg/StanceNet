@@ -2,7 +2,7 @@
 """
 Created on Tue Jul  9 14:41:36 2019
 
-@author: myidi
+@author: myidispg
 """
 
 import os
