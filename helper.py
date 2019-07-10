@@ -24,6 +24,11 @@ def get_image_name(image_id):
     
     return image_name
 
+def get_image_id_from_filename(filename):
+    """
+    Get the image_id from a filename with .jpg extension
+    """    
+    return int(filename.split('.')[0])
 
 def group_keypoints(keypoints):
     """
@@ -87,7 +92,7 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
                     y1 = person_keypoints[joint_index[0]-1][1]
                     x2 = person_keypoints[joint_index[1]-1][0]
                     y2 = person_keypoints[joint_index[1]-1][1]
-                    cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 4)
+                    cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
                 
     cv2.imshow('image', img)

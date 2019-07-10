@@ -7,8 +7,10 @@ Created on Tue Jul  9 14:41:36 2019
 
 import os
 
-im_height = 426
-im_width = 640
+im_height = 240
+im_width = 240
+
+num_joints = 17
 
 dataset_dir = os.path.join('C:\Machine Learning Projects\OpenPose', 'Coco_Dataset')
 
