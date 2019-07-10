@@ -52,7 +52,8 @@ for annotation in train_dict['annotations']:
             keypoints_train[annotation['image_id']] = [group_keypoints(
                     annotation['keypoints'])]
 
-draw_skeleton(209468, keypoints_train[209468], skeleton_limb_indices, val=False)
+draw_skeleton(209468, keypoints_train[209468], skeleton_limb_indices,
+              val=False, wait_time=1)
 
 # Now, I am going to remove all the images from the test and validation directory
 # that are not labelled with people in the images.
@@ -91,5 +92,16 @@ for image in train_images:
         
 print(f'Removed {len(list_)} images from train_folder.')
 
+# As a final check, see if all the remaining images have keypoints for them.
+for image in val_images:
+    image_id = get_image_id_from_filename(image)
+    draw_skeleton(image_id, keypoints_val[image_id], skeleton_limb_indices, 
+                  wait_time=1, val=True)
+    
+print('There seems to be no issues with the validation set and labels.')
 
-
+for image in train_images:
+    image_id = get_image_id_from_filename(image)
+    draw_skeleton(image_id, keypoints_train[image_id], skeleton_limb_indices, 
+                  wait_time=1, val=False)
+print('There seems to be no issues with the train set and labels.')

@@ -37,7 +37,8 @@ def group_keypoints(keypoints):
     
     return arranged_keypoints
 
-def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices, val=False):
+def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
+                  wait_time = 0, val=False):
     """
     Given the image_id and keypoints of the image, draws skeleton accordingly.
     Inputs:
@@ -90,5 +91,5 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices, val=False):
 
                 
     cv2.imshow('image', img)
-    cv2.waitKey(0)
+    cv2.waitKey(wait_time)
     cv2.destroyAllWindows()
