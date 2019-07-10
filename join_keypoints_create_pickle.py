@@ -93,15 +93,36 @@ for image in train_images:
 print(f'Removed {len(list_)} images from train_folder.')
 
 # As a final check, see if all the remaining images have keypoints for them.
+val_images = os.listdir(os.path.join(dataset_dir, 'val2017'))
+
 for image in val_images:
     image_id = get_image_id_from_filename(image)
-    draw_skeleton(image_id, keypoints_val[image_id], skeleton_limb_indices, 
-                  wait_time=1, val=True)
+    if image_id in keypoints_val.keys():
+        pass
+    else:
+        print(f'Problem with {image_id}')
     
 print('There seems to be no issues with the validation set and labels.')
 
+train_images = os.listdir(os.path.join(dataset_dir, 'train2017'))
 for image in train_images:
     image_id = get_image_id_from_filename(image)
-    draw_skeleton(image_id, keypoints_train[image_id], skeleton_limb_indices, 
-                  wait_time=1, val=False)
+    if image_id in keypoints_train.keys():
+        pass
+    else:
+        print(f'Problem with {image_id}')
+    
+#    draw_skeleton(image_id, keypoints_train[image_id], skeleton_limb_indices, 
+#                  wait_time=1, val=False)
+    
 print('There seems to be no issues with the train set and labels.')
+
+# Save the keypoints to a pickle file
+import pickle 
+pickle_out = open('Coco_Dataset/keypoints_train.pickle', 'wb')
+pickle.dump(keypoints_train, pickle_out)
+pickle_out.close()
+
+pickle_out = open('Coco_Dataset/keypoints_val.pickle', 'wb')
+pickle.dump(keypoints_val, pickle_out)
+pickle_out.close()

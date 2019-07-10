@@ -7,6 +7,9 @@ Created on Tue Jul  9 14:41:36 2019
 
 import os
 
+im_height = 426
+im_width = 640
+
 dataset_dir = os.path.join('C:\Machine Learning Projects\OpenPose', 'Coco_Dataset')
 
 # The joint pairs to create skeletons.
