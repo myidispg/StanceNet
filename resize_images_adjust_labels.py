@@ -40,7 +40,6 @@ def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
         # Iterate over the all the people in the image
         for person in range(len(all_keypoints[img_id])):
             person_keypoints = []
-#            print(all_keypoints[img_id][person])
            # Iterate over all keypoints
             for keypoint in all_keypoints[img_id][person]:
                 width_ratio = keypoint[0] / old_width
@@ -52,10 +51,8 @@ def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
                 new_keypoint = (new_x, new_y, keypoint[2])
                 
                 person_keypoints.append(new_keypoint)
-#                print(new_keypoint)
             all_person_keypoints.append(person_keypoints)
         new_keypoints[img_id] = all_person_keypoints
-#        break
         img = cv2.resize(img, (im_height, im_width))
         if val:
             print(os.path.join(dataset_dir, 'new_val2017', img_name))
@@ -70,7 +67,7 @@ def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
 new_keypoints_val = resize_image_keypoint(keypoints_val, im_width, im_height, True)
 new_keypoints_train = resize_image_keypoint(keypoints_train, im_width, im_height)
 
-draw_skeleton(5, new_keypoints_train[5], skeleton_limb_indices, val=False)
+#draw_skeleton(5, new_keypoints_train[5], skeleton_limb_indices, val=False)
 
 # Save the keypoints to a pickle file
 import pickle 
