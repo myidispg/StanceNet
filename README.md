@@ -4,7 +4,9 @@ This repository holds the code for my implementation of OpenPose paper. This is 
 
 **None**: Download the dataset and put the annotations, train and val images in the Coco_Dataset directory in the repository directory. The file path should be like this:
 **1: Train images-** `StanceNet/Coco_Dataset/train2017/{images}`
+
 **2: Validation images-** `StanceNet/Coco_Dataset/val2017/{images}`
+
 **3: Annotations-** `StanceNet/Coco_Dataset/annotations/person_keypoints_train2017.json` and `StanceNet/Coco_Dataset/annotations/person_keypoints_val2017.json`
 
 ## File and their purposes
