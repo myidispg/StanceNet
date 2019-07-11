@@ -8,8 +8,8 @@ This repository holds the code for my implementation of OpenPose paper. This is 
 **3: Annotations-** `StanceNet/Coco_Dataset/annotations/person_keypoints_train2017.json` and `StanceNet/Coco_Dataset/annotations/person_keypoints_val2017.json`
 
 ## File and their purposes
-**constants.py**: Contains all the constant variables used throughout the project.
-**helper.py**: Contains all the helper functions that are used at various locations in the project.
-**explore_data.py**: Contains some code which I used to explore the COCO Dataset.
-**join_keypoints_create_pickle.py**: Converts the annotation to Python dictionaries, removes non-labelled images from the dataset, change names so that the names are sequential (000000000000.jpg, 000000000001.jpg etc.) and finally save the annotation dictionaries to pickle files.
-**resize_images_adjust_labels.py**: The dataset images were not of uniform shapes. Hence, resized them to 224x224 pixels and made adjustment to the labels accordingly.
+**constants.py**: Contains all the constant variables used throughout the project.<br>
+**helper.py**: Contains all the helper functions that are used at various locations in the project.<br}
+**explore_data.py**: Contains some code which I used to explore the COCO Dataset.<br>
+**join_keypoints_create_pickle.py**: Converts the annotation to Python dictionaries, removes non-labelled images from the dataset, change names so that the names are sequential (000000000000.jpg, 000000000001.jpg etc.) and finally save the annotation dictionaries to pickle files.<br>
+**resize_images_adjust_labels.py**: The dataset images were not of uniform shapes. Hence, resized them to 224x224 pixels and made adjustment to the labels accordingly.<br>
