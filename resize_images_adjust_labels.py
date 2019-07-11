@@ -70,7 +70,7 @@ def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
 new_keypoints_val = resize_image_keypoint(keypoints_val, im_width, im_height, True)
 new_keypoints_train = resize_image_keypoint(keypoints_train, im_width, im_height)
 
-#draw_skeleton(4, new_keypoints_val[4], skeleton_limb_indices, val=True)
+draw_skeleton(5, new_keypoints_train[5], skeleton_limb_indices, val=False)
 
 # Save the keypoints to a pickle file
 import pickle 

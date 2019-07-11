@@ -66,11 +66,11 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     
     if val:
         image_path = os.path.join(dataset_dir, 
-                                    'val2017', 
+                                    'new_val2017', 
                                     image_name)
     else:
         image_path = os.path.join(dataset_dir,
-                                  'train2017',
+                                  'new_train2017',
                                   image_name)
     
     img = cv2.imread(image_path, cv2.IMREAD_COLOR)
