@@ -10,22 +10,22 @@ import pickle
 import os
 
 import cv2
-im = cv2.imread('Coco_Dataset/val2017/000000000785.jpg', cv2.IMREAD_COLOR)
+#im = cv2.imread('Coco_Dataset/new_val2017/000000000000.jpg', cv2.IMREAD_COLOR)
 
-from constants import dataset_dir, num_joints, im_height, im_width
-from helper import get_image_name
+from constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
+from helper import get_image_name, draw_skeleton
 
 # Read the pickle files into dictionaries.
-pickle_in = open(os.path.join(dataset_dir, 'keypoints_train.pickle'), 'rb')
+pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
 keypoints_train = pickle.load(pickle_in)
 
-pickle_in = open(os.path.join(dataset_dir, 'keypoints_val.pickle'), 'rb')
+pickle_in = open(os.path.join(dataset_dir, 'keypoints_val_new.pickle'), 'rb')
 keypoints_val = pickle.load(pickle_in)
 
 pickle_in.close()
 
 
-def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val=False):
+def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val=False, sigma=1500):
     """
     Generate confidence maps given all_keypoints dictionary.
     The generated confidence_maps are of shape: 
@@ -39,29 +39,59 @@ def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val
     Output:
         conf_map: A numpy array of shape: (num_images, im_width, im_height, num_joints)
     """
+    import math
     
     num_images = len(all_keypoints)
     
-    conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.int8)
+    conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.float16)
     
+    # For image in all images
     for image_id in all_keypoints.keys():
-        print(image_id)
+        
+        if (image_id) % 100 == 0:
+            print(f"Generating confidence map for image_id: {image_id}")
+        
         img_name = get_image_name(image_id)
-        print(os.path.join(dataset_dir, 'val2017', img_name))
         if val:
-            img = cv2.imread(os.path.join(dataset_dir, 'val2017', img_name))
+            img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', img_name))
         else:
-            img = cv2.imread(os.path.join(dataset_dir, 'train2017', img_name))
+            img = cv2.imread(os.path.join(dataset_dir, 'new_train2017', img_name))
         
-        print(img.shape)
-        print(len(all_keypoints[image_id]))
+        # For a person in the image
         for person in range(len(all_keypoints[image_id])):
-            for keypoint in all_keypoints[image_id][person]:
-                print(img[keypoint[0], keypoint[1]])
+            # For all keypoints in the image.
+            for part_num in range(len(all_keypoints[image_id][person])):
+#            for keypoint in all_keypoints[image_id][person]:
+                # Get the pixel values at a given keypoint across all 3 channels.
+                # Note that our labels have images (im_width, im_height),
+                # OpenCV has (im_height, im_width)
+                x_index = all_keypoints[image_id][person][part_num][1]
+                y_index = all_keypoints[image_id][person][part_num][0]
+                pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
+                
+                norm = -((0-pix_1)**2) - ((0-pix_2)**2) - ((0-pix_3)**2)
+                
+#                print(math.exp((norm) / (sigma) ** 2))
+                
+                confidence_score = math.exp((norm) / (sigma) ** 2)
+                
+                conf_map[image_id, x_index, y_index] = confidence_score
+#        break
         
-        break
-    
     
     return conf_map
 
-print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
+#print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
+
+val_conf_maps = generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True)
+
+# Visualize a confidence map.
+index = 13
+img = np.ceil(val_conf_maps[index, :, :, 0]).astype(np.uint8)
+img = np.where(img > 0, 200, img)
+cv2.imshow('image', img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+draw_skeleton(index, keypoints_val[index], skeleton_limb_indices, val=True)
+

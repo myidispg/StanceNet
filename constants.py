@@ -12,6 +12,9 @@ im_width = 240
 
 num_joints = 17
 
+# Used in creating confidence maps.
+sigma = 1500
+
 dataset_dir = os.path.join('C:\Machine Learning Projects\OpenPose', 'Coco_Dataset')
 
 # The joint pairs to create skeletons.
