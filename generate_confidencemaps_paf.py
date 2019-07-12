@@ -25,7 +25,7 @@ keypoints_val = pickle.load(pickle_in)
 pickle_in.close()
 
 
-def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val=False, sigma=1500):
+def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_joints, val=False, sigma=1500):
     """
     Generate confidence maps given all_keypoints dictionary.
     The generated confidence_maps are of shape: 
@@ -33,6 +33,7 @@ def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val
     Input:
         all_keypoints: Keypoints for all the image in the dataset. It is a 
         dictionary that contains image_id as keys and keypoints for each person.
+        indices: a list of indices for which the conf_maps are to be generated.
         im_height: height of image in pixels
         im_width: width of image in pixels
         num_joints: total number of joints labelled.
@@ -41,15 +42,12 @@ def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val
     """
     import math
     
-    num_images = len(all_keypoints)
+    num_images = len(indices)
     
     conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.float16)
     
     # For image in all images
-    for image_id in all_keypoints.keys():
-        
-        if (image_id) % 100 == 0:
-            print(f"Generating confidence map for image_id: {image_id}")
+    for image_id in indices:
         
         img_name = get_image_name(image_id)
         if val:
@@ -75,7 +73,7 @@ def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val
                 
                 confidence_score = math.exp((norm) / (sigma) ** 2)
                 
-                conf_map[image_id, x_index, y_index] = confidence_score
+                conf_map[image_id % num_images, x_index, y_index] = confidence_score
 #        break
         
     
@@ -83,15 +81,15 @@ def generate_confidence_maps(all_keypoints, im_width, im_height, num_joints, val
 
 #print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
 
-val_conf_maps = generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True)
+val_conf_maps = generate_confidence_maps(keypoints_val, range(16, 32), im_width, im_height, num_joints, True)
 
 # Visualize a confidence map.
-index = 13
+index = 11
 img = np.ceil(val_conf_maps[index, :, :, 0]).astype(np.uint8)
-img = np.where(img > 0, 200, img)
+img = np.where(img > 0, 255, img)
 cv2.imshow('image', img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-draw_skeleton(index, keypoints_val[index], skeleton_limb_indices, val=True)
+draw_skeleton(27, keypoints_val[27], skeleton_limb_indices, val=True)
 
