@@ -183,7 +183,7 @@ def bressenham_line_drawing(start, end):
     return points_bet
 
 
-def line_drawing_neg(start, end):
+def dda_line(start, end):
     points_bet = list()
     
     x1, y1 = start[0], start[1]
@@ -192,18 +192,79 @@ def line_drawing_neg(start, end):
     dx = x2 - x1
     dy = y2 - y1
     
-    p = 2*dy-dx
+    steps = abs(dx) if abs(dx) > abs(dy) else abs(dy)
     
+    x_inc = dx / float(steps)
+    y_inc = dx /  float(steps)
+    
+    x = x1
     y = y1
-    for x in range(x1, x2+1):
-        points_bet.append((x, y))
-        if p < 0:
-            p += 2*dy
-        else:
-            y += 1
-            p += 2*dy - 2*dx
     
+    for i in range(steps+1):
+        points_bet.append((int(x), int(y)))
+        x += x_inc
+        y += y_inc
+        
     return points_bet
 
-print(line_drawing_neg([169, 125], [166, 127]))
-print(bressenham_line_drawing([169, 125], [166, 127]))
+def sign(x):
+    
+    if x < 0:
+        return -1
+    elif x == 0:
+        return 0
+    else: 
+        return 1
+
+def bressenham_line(start, end):
+    
+    points_bet = list()
+    
+    x1, y1 = start[0], start[1]
+    x2, y2 = end[0], end[1]
+    
+    x = x1
+    y = y1
+    
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    
+    s1 = sign(x2-x1)
+    s2 = sign(y2 - y1)
+    
+    print(f's1: {s1}\ts2: {s2}')
+    
+    if dy > dx:
+        dx, dy = dy, dx
+        interchange = 1
+    else:
+        interchange = 0
+    
+    print(f'dx: {dx}\t dy: {dy}\tinterchange: {interchange}')
+    
+    e = 2 * dy - dx
+    a = 2 * dy
+    b = 2 * dy - 2 * dx
+    
+    print(f'e: {e}\ta: {a}\tb: {b}')
+    
+    points_bet.append((x, y))
+    for i in range(dx):
+        if e < 0:
+            print(f'here')
+            if interchange == 1:
+                y += s2
+            else:
+                x += s1
+            e += a
+        else:
+            y += s2
+            x += s1
+            e += b
+        points_bet.append((x, y))
+    
+    return points_bet
+    
+print(bressenham_line([170, 146], [168, 151]))
+print(dda_line([167, 146], [170, 163]))
+print(bressenham_line_drawing([167, 146], [170, 163]))

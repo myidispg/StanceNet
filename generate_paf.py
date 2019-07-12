@@ -12,7 +12,7 @@ import pickle
 import os
 
 from constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
-from helper import get_image_name, draw_skeleton
+from helper import get_image_name, draw_skeleton, dda_line
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
@@ -69,9 +69,9 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
                 joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
                 joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
                 
-                print(joint_one_loc)
-                print(joint_two_loc)
-                print()
+#                print(joint_one_loc)
+#                print(joint_two_loc)
+#                print()
 #                print(joint_one_loc -  joint_two_loc)
                 
                 norm = np.linalg.norm(joint_one_loc - joint_two_loc, ord=2)
@@ -81,6 +81,10 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
                     vector = joint_one_loc - joint_two_loc
                 else:
                     vector = (joint_one_loc - joint_two_loc)/norm
+                
+                print(f'for joint 1: {joint_one_loc} and joint 2: {joint_two_loc}')
+                print(dda_line(joint_one_loc, joint_two_loc))
+                
                 
         break
         
