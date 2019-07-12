@@ -100,20 +100,19 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     cv2.destroyAllWindows()
     
 
-def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_joints, val=False, sigma=1500):
+def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
     """
-    Generate confidence maps given all_keypoints dictionary.
+    Generate confidence maps for a batch of indices.
     The generated confidence_maps are of shape: 
-        (num_images, im_width, im_height, num_joints)
+        (batch_size, im_width, im_height, num_joints)
     Input:
-        all_keypoints: Keypoints for all the image in the dataset. It is a 
+        all_keypoints: Keypoints for all the images in the dataset. It is a 
         dictionary that contains image_id as keys and keypoints for each person.
         indices: a list of indices for which the conf_maps are to be generated.
-        im_height: height of image in pixels
-        im_width: width of image in pixels
-        num_joints: total number of joints labelled.
+        val: True if used for validation set, else false
+        sigma: used to generate the confidence score. Higher values lead higher score.
     Output:
-        conf_map: A numpy array of shape: (num_images, im_width, im_height, num_joints)
+        conf_map: A numpy array of shape: (batch_size, im_width, im_height, num_joints)
     """
     
     # Necessary imports for this function.
@@ -121,7 +120,7 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
     import cv2
     import os
     import numpy as np
-    from constants import dataset_dir
+    from constants import dataset_dir, im_width, im_height, num_joints
     
     num_images = len(indices)
     
@@ -138,7 +137,7 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
         
         # For a person in the image
         for person in range(len(all_keypoints[image_id])):
-            # For all keypoints in the image.
+            # For all keypoints for the person.
             for part_num in range(len(all_keypoints[image_id][person])):
 #            for keypoint in all_keypoints[image_id][person]:
                 # Get the pixel values at a given keypoint across all 3 channels.
@@ -163,3 +162,48 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
         
     
     return conf_map
+
+def bressenham_line_drawing(start, end):
+    points_bet = list()
+    
+    x1, y1 = start[0], start[1]
+    x2, y2 = end[0], end[1]
+    
+    m = 2 * (y2-y1)
+    slope_error = m - (x2-x1)
+    y = y1
+    for x in range(x1, x2+1):
+        points_bet.append((x, y))
+        slope_error += m
+        
+        if slope_error >= 0:
+            y+=1
+            slope_error -= (2*(x2-x1))
+    
+    return points_bet
+
+
+def line_drawing_neg(start, end):
+    points_bet = list()
+    
+    x1, y1 = start[0], start[1]
+    x2, y2 = end[0], end[1]
+    
+    dx = x2 - x1
+    dy = y2 - y1
+    
+    p = 2*dy-dx
+    
+    y = y1
+    for x in range(x1, x2+1):
+        points_bet.append((x, y))
+        if p < 0:
+            p += 2*dy
+        else:
+            y += 1
+            p += 2*dy - 2*dx
+    
+    return points_bet
+
+print(line_drawing_neg([169, 125], [166, 127]))
+print(bressenham_line_drawing([169, 125], [166, 127]))

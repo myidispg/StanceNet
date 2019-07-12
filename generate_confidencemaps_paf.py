@@ -25,7 +25,7 @@ keypoints_val = pickle.load(pickle_in)
 pickle_in.close()
 
 
-def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_joints, val=False, sigma=1500):
+def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
     """
     Generate confidence maps given all_keypoints dictionary.
     The generated confidence_maps are of shape: 
@@ -34,9 +34,8 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
         all_keypoints: Keypoints for all the image in the dataset. It is a 
         dictionary that contains image_id as keys and keypoints for each person.
         indices: a list of indices for which the conf_maps are to be generated.
-        im_height: height of image in pixels
-        im_width: width of image in pixels
-        num_joints: total number of joints labelled.
+        val: True if used for validation set, else false
+        sigma: used to generate the confidence score. Higher values lead higher score.
     Output:
         conf_map: A numpy array of shape: (num_images, im_width, im_height, num_joints)
     """
@@ -85,7 +84,7 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
 
 #print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
 
-val_conf_maps = generate_confidence_maps(keypoints_val, range(16, 32), im_width, im_height, num_joints, True)
+val_conf_maps = generate_confidence_maps(keypoints_val, range(16, 32), val=True)
 
 # Visualize a confidence map.
 index = 0
