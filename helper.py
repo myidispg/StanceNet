@@ -98,3 +98,68 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     cv2.imshow('image', img)
     cv2.waitKey(wait_time)
     cv2.destroyAllWindows()
+    
+
+def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_joints, val=False, sigma=1500):
+    """
+    Generate confidence maps given all_keypoints dictionary.
+    The generated confidence_maps are of shape: 
+        (num_images, im_width, im_height, num_joints)
+    Input:
+        all_keypoints: Keypoints for all the image in the dataset. It is a 
+        dictionary that contains image_id as keys and keypoints for each person.
+        indices: a list of indices for which the conf_maps are to be generated.
+        im_height: height of image in pixels
+        im_width: width of image in pixels
+        num_joints: total number of joints labelled.
+    Output:
+        conf_map: A numpy array of shape: (num_images, im_width, im_height, num_joints)
+    """
+    
+    # Necessary imports for this function.
+    import math
+    import cv2
+    import os
+    import numpy as np
+    from constants import dataset_dir
+    
+    num_images = len(indices)
+    
+    conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.float16)
+    
+    # For image in all images
+    for image_id in indices:
+        
+        img_name = get_image_name(image_id)
+        if val:
+            img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', img_name))
+        else:
+            img = cv2.imread(os.path.join(dataset_dir, 'new_train2017', img_name))
+        
+        # For a person in the image
+        for person in range(len(all_keypoints[image_id])):
+            # For all keypoints in the image.
+            for part_num in range(len(all_keypoints[image_id][person])):
+#            for keypoint in all_keypoints[image_id][person]:
+                # Get the pixel values at a given keypoint across all 3 channels.
+                # Note that our labels have images (im_width, im_height),
+                # OpenCV has (im_height, im_width)
+                x_index = all_keypoints[image_id][person][part_num][1]
+                y_index = all_keypoints[image_id][person][part_num][0]
+                pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
+                
+#                print(f'pix1: {pix_1}, pix2: {pix_2}, pix3: {pix_3}')
+                
+                norm = -((0-pix_1)**2) - ((0-pix_2)**2) - ((0-pix_3)**2)
+                
+#                print(math.exp((norm) / (sigma) ** 2))
+                
+                confidence_score = math.exp((norm) / (sigma) ** 2)
+                
+#                print(f'Confidence score: {confidence_score}')
+                
+                conf_map[image_id % num_images, x_index, y_index] = confidence_score
+#        break
+        
+    
+    return conf_map

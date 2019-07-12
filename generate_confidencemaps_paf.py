@@ -67,11 +67,15 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
                 y_index = all_keypoints[image_id][person][part_num][0]
                 pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
                 
+#                print(f'pix1: {pix_1}, pix2: {pix_2}, pix3: {pix_3}')
+                
                 norm = -((0-pix_1)**2) - ((0-pix_2)**2) - ((0-pix_3)**2)
                 
 #                print(math.exp((norm) / (sigma) ** 2))
                 
                 confidence_score = math.exp((norm) / (sigma) ** 2)
+                
+#                print(f'Confidence score: {confidence_score}')
                 
                 conf_map[image_id % num_images, x_index, y_index] = confidence_score
 #        break
@@ -84,12 +88,12 @@ def generate_confidence_maps(all_keypoints, indices, im_width, im_height, num_jo
 val_conf_maps = generate_confidence_maps(keypoints_val, range(16, 32), im_width, im_height, num_joints, True)
 
 # Visualize a confidence map.
-index = 11
+index = 0
 img = np.ceil(val_conf_maps[index, :, :, 0]).astype(np.uint8)
 img = np.where(img > 0, 255, img)
 cv2.imshow('image', img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-draw_skeleton(27, keypoints_val[27], skeleton_limb_indices, val=True)
+draw_skeleton(16, keypoints_val[16], skeleton_limb_indices, val=True)
 
