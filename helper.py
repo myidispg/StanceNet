@@ -141,29 +141,23 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
         for person in range(len(all_keypoints[image_id])):
             # For all keypoints for the person.
             for part_num in range(len(all_keypoints[image_id][person])):
-#            for keypoint in all_keypoints[image_id][person]:
+                # For keypoint in all_keypoints[image_id][person]:
                 # Get the pixel values at a given keypoint across all 3 channels.
                 # Note that our labels have images (im_width, im_height),
                 # OpenCV has (im_height, im_width)
-                x_index = all_keypoints[image_id][person][part_num][1]
-                y_index = all_keypoints[image_id][person][part_num][0]
+                x_index = all_keypoints[image_id][person][part_num][0]
+                y_index = all_keypoints[image_id][person][part_num][1]
                 pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
-                
-#                print(f'pix1: {pix_1}, pix2: {pix_2}, pix3: {pix_3}')
                 
                 norm = -((0-pix_1)**2) - ((0-pix_2)**2) - ((0-pix_3)**2)
                 
-#                print(math.exp((norm) / (sigma) ** 2))
-                
                 confidence_score = math.exp((norm) / (sigma) ** 2)
                 
-#                print(f'Confidence score: {confidence_score}')
-                
                 conf_map[image_id % num_images, x_index, y_index] = confidence_score
-#        break
-        
     
     return conf_map
+
+
 def sign(x):
     
     if x < 0:
@@ -189,26 +183,20 @@ def bressenham_line(start, end):
     s1 = sign(x2-x1)
     s2 = sign(y2 - y1)
     
-#    print(f's1: {s1}\ts2: {s2}')
-    
     if dy > dx:
         dx, dy = dy, dx
         interchange = 1
     else:
         interchange = 0
     
-#    print(f'dx: {dx}\t dy: {dy}\tinterchange: {interchange}')
-    
     e = 2 * dy - dx
     a = 2 * dy
     b = 2 * dy - 2 * dx
     
-#    print(f'e: {e}\ta: {a}\tb: {b}')
     
     points_bet.append((x, y))
     for i in range(dx):
         if e < 0:
-#            print(f'here')
             if interchange == 1:
                 y += s2
             else:
@@ -222,4 +210,62 @@ def bressenham_line(start, end):
     
     return points_bet
     
-print(bressenham_line([170, 140], [168, 141]))
+
+def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
+    """
+    Generate Part Affinity Fields given a batch of keypoints.
+    Inputs:
+        all_keypoints: Keypoints for all the images in the dataset. It is a 
+        dictionary that contains image_id as keys and keypoints for each person.
+        indices: The list of indices from the keypoints for which PAFs are to 
+        be generated.
+        skeleton_limb_indices: The indices to create limbs from joints.
+        val(Default=False): True if validation set, False otherwise. 
+        
+    Outputs:
+        paf: A parts affinity fields map of shape: 
+            (batch_size, im_width, im_height, 2, num_joints)
+    """
+    
+    import cv2
+    import os
+    import numpy as np
+    from constants import dataset_dir, im_width, im_height, num_joints
+    
+    num_images = len(indices)
+    
+    paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
+    
+    # For image in all_images
+    for image_id in indices:
+        
+        # For each person in the image
+        for person in range(len(all_keypoints[image_id])):
+            # For each limb in the skeleton
+            for i in range(len(skeleton_limb_indices)):
+                
+                limb_indices = skeleton_limb_indices[i]
+                
+                joint_one_index = limb_indices[0] - 1
+                joint_two_index = limb_indices[1] - 1
+                # If there is 0 for visibility, skip the limb
+                if all_keypoints[image_id][person][joint_one_index][2] == 0 or all_keypoints[image_id][person][joint_two_index][2] == 0:
+                    pass
+                else:
+                    joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
+                    joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
+                    
+                    norm = np.linalg.norm(joint_two_loc - joint_one_loc, ord=2)
+                    
+                    if norm == 0:
+                        vector = joint_two_loc - joint_one_loc
+                    else:
+                        vector = (joint_two_loc - joint_one_loc)/norm
+                    
+                    
+                    line_points = bressenham_line(joint_one_loc, joint_two_loc)
+                    for point in line_points:
+                        paf[image_id % num_images, point[0], point[1], 0, i] = vector[0]
+                        paf[image_id % num_images, point[0], point[1], 1, i] = vector[1]
+        
+    return paf

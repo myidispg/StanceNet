@@ -7,8 +7,8 @@ Created on Tue Jul  9 14:41:36 2019
 
 import os
 
-im_height = 240
-im_width = 240
+im_height = 224
+im_width = 224
 
 num_joints = 17
 

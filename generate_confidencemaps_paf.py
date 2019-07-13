@@ -62,8 +62,8 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
                 # Get the pixel values at a given keypoint across all 3 channels.
                 # Note that our labels have images (im_width, im_height),
                 # OpenCV has (im_height, im_width)
-                x_index = all_keypoints[image_id][person][part_num][1]
-                y_index = all_keypoints[image_id][person][part_num][0]
+                x_index = all_keypoints[image_id][person][part_num][0]
+                y_index = all_keypoints[image_id][person][part_num][1]
                 pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
                 
 #                print(f'pix1: {pix_1}, pix2: {pix_2}, pix3: {pix_3}')
@@ -84,12 +84,13 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
 
 #print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
 
-val_conf_maps = generate_confidence_maps(keypoints_val, range(16, 32), val=True)
+val_conf_maps = generate_confidence_maps(keypoints_val, range(64), val=True)
 
 # Visualize a confidence map.
-index = 0
+index = 1
 img = np.ceil(val_conf_maps[index, :, :, 0]).astype(np.uint8)
 img = np.where(img > 0, 255, img)
+img = np.transpose(img)
 cv2.imshow('image', img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
