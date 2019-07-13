@@ -12,7 +12,7 @@ import pickle
 import os
 
 from constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
-from helper import get_image_name, draw_skeleton, dda_line
+from helper import get_image_name, draw_skeleton, bressenham_line
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
@@ -38,12 +38,11 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
     import cv2
     import os
     import numpy as np
-    import math
     from constants import dataset_dir, im_width, im_height, num_joints
     
     num_images = len(indices)
     
-    paf = np.zeros((num_images, im_width, im_height, 2, num_joints), np.float16)
+    paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
     
     # For image in all_images
     for image_id in indices:
@@ -62,35 +61,60 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
         # For each person in the image
         for person in range(len(all_keypoints[image_id])):
             # For each limb in the skeleton
-            for limb_indices in skeleton_limb_indices:
-#                print(limb_indices)
+            for i in range(len(skeleton_limb_indices)):
+                
+                limb_indices = skeleton_limb_indices[i]
+                
+                print(i)
+                print(limb_indices)
+                
                 joint_one_index = limb_indices[0] - 1
                 joint_two_index = limb_indices[1] - 1
-                joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
-                joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
-                
-#                print(joint_one_loc)
-#                print(joint_two_loc)
-#                print()
-#                print(joint_one_loc -  joint_two_loc)
-                
-                norm = np.linalg.norm(joint_one_loc - joint_two_loc, ord=2)
-#                print(norm)
-                
-                if norm == 0:
-                    vector = joint_one_loc - joint_two_loc
+                # If there is 0 for visibility, skip the limb
+                if all_keypoints[image_id][person][joint_one_index][2] == 0 or all_keypoints[image_id][person][joint_two_index][2] == 0:
+                    pass
                 else:
-                    vector = (joint_one_loc - joint_two_loc)/norm
-                
-                print(f'for joint 1: {joint_one_loc} and joint 2: {joint_two_loc}')
-                print(dda_line(joint_one_loc, joint_two_loc))
-                
+                    joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
+                    joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
+                    
+                    norm = np.linalg.norm(joint_two_loc - joint_one_loc, ord=2)
+                    
+                    if norm == 0:
+                        vector = joint_two_loc - joint_one_loc
+                    else:
+                        vector = (joint_two_loc - joint_one_loc)/norm
+                    
+#                    print(f'joint one: {joint_one_loc}\tjoint two: {joint_two_loc}')
+                    
+                    line_points = bressenham_line(joint_one_loc, joint_two_loc)
+                    print(f'joint one: {joint_one_loc}\tjoint two: {joint_two_loc}')
+                    if i == 3:
+
+                        print(line_points)
+                    for point in line_points:
+                        paf[image_id % num_images, point[1], point[0], 0, i] = vector[0]
+                        paf[image_id % num_images, point[1], point[0], 1, i] = vector[1]
+                    
+#                    print(vector)
                 
         break
         
     return paf
 
-val_paf = generate_paf(keypoints_val, range(10), skeleton_limb_indices, True)
+val_paf = generate_paf(keypoints_val, range(4, 10), skeleton_limb_indices, True)
 print(val_paf.shape)
-    
-draw_skeleton(0, keypoints_val[0], skeleton_limb_indices, val=True)
+print(val_paf[0, :, : , 0, 2])
+
+something = val_paf[img_index, :, :, 0, 3]
+# Visualize a paf for a joint
+img_index = 4
+for i in range(len(skeleton_limb_indices)):
+    limb_index = i
+    img = val_paf[img_index, :, :, 0, limb_index]
+#    img = np.ceil(val_paf[img_index, :, :, 0, limb_index]).astype(np.uint8)
+    img = np.where(img != 0, 255, img).astype(np.uint8)
+    cv2.imshow('image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+draw_skeleton(img_index, keypoints_val[img_index], skeleton_limb_indices, val=True)

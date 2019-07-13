@@ -73,6 +73,8 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
                                   'new_train2017',
                                   image_name)
     
+    print(image_path)
+    
     img = cv2.imread(image_path, cv2.IMREAD_COLOR)
     
     # For each keypoint in keypoints, draw the person.
@@ -162,51 +164,6 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
         
     
     return conf_map
-
-def bressenham_line_drawing(start, end):
-    points_bet = list()
-    
-    x1, y1 = start[0], start[1]
-    x2, y2 = end[0], end[1]
-    
-    m = 2 * (y2-y1)
-    slope_error = m - (x2-x1)
-    y = y1
-    for x in range(x1, x2+1):
-        points_bet.append((x, y))
-        slope_error += m
-        
-        if slope_error >= 0:
-            y+=1
-            slope_error -= (2*(x2-x1))
-    
-    return points_bet
-
-
-def dda_line(start, end):
-    points_bet = list()
-    
-    x1, y1 = start[0], start[1]
-    x2, y2 = end[0], end[1]
-    
-    dx = x2 - x1
-    dy = y2 - y1
-    
-    steps = abs(dx) if abs(dx) > abs(dy) else abs(dy)
-    
-    x_inc = dx / float(steps)
-    y_inc = dx /  float(steps)
-    
-    x = x1
-    y = y1
-    
-    for i in range(steps+1):
-        points_bet.append((int(x), int(y)))
-        x += x_inc
-        y += y_inc
-        
-    return points_bet
-
 def sign(x):
     
     if x < 0:
@@ -232,7 +189,7 @@ def bressenham_line(start, end):
     s1 = sign(x2-x1)
     s2 = sign(y2 - y1)
     
-    print(f's1: {s1}\ts2: {s2}')
+#    print(f's1: {s1}\ts2: {s2}')
     
     if dy > dx:
         dx, dy = dy, dx
@@ -240,18 +197,18 @@ def bressenham_line(start, end):
     else:
         interchange = 0
     
-    print(f'dx: {dx}\t dy: {dy}\tinterchange: {interchange}')
+#    print(f'dx: {dx}\t dy: {dy}\tinterchange: {interchange}')
     
     e = 2 * dy - dx
     a = 2 * dy
     b = 2 * dy - 2 * dx
     
-    print(f'e: {e}\ta: {a}\tb: {b}')
+#    print(f'e: {e}\ta: {a}\tb: {b}')
     
     points_bet.append((x, y))
     for i in range(dx):
         if e < 0:
-            print(f'here')
+#            print(f'here')
             if interchange == 1:
                 y += s2
             else:
@@ -265,6 +222,4 @@ def bressenham_line(start, end):
     
     return points_bet
     
-print(bressenham_line([170, 146], [168, 151]))
-print(dda_line([167, 146], [170, 163]))
-print(bressenham_line_drawing([167, 146], [170, 163]))
+print(bressenham_line([170, 140], [168, 141]))
