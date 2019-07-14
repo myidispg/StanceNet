@@ -56,8 +56,8 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
                 # Get the pixel values at a given keypoint across all 3 channels.
                 # Note that our labels have images (im_width, im_height),
                 # OpenCV has (im_height, im_width)
-                x_index = all_keypoints[image_id][person][part_num][0]
-                y_index = all_keypoints[image_id][person][part_num][1]
+                x_index = all_keypoints[image_id][person][part_num][1]
+                y_index = all_keypoints[image_id][person][part_num][0]
                 visibility = all_keypoints[image_id][person][part_num][2]
                 
 #                print(f'image_id: {image_id}')
@@ -85,25 +85,25 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     
     return conf_map
 
-#print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
-
 import time
 
 time1 = time.time_ns() // 1000000 
 val_conf_maps = generate_confidence_maps(keypoints_val, range(64), val=True)
 time2 = time.time_ns() // 1000000 
 print(f'The operation took: {time2 - time1} milliseconds')
-print(np.sum(val_conf_maps[0, :, :, 0]))
 
 # Visualize a confidence map.
 index = 1
 for i in range(17):
-    img = val_conf_maps[index, :, :, i] * 255
-    img = np.transpose(img).astype(np.uint8)
-#    cv2.imwrite(f'{index}_{i}.jpg', img)
-    cv2.imshow('image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    img = (val_conf_maps[index, :, :, i] * 255).astype(np.uint8)
+#    img = np.transpose(img).astype(np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    img = cv2.resize(img, (700, 700))
+    cv2.imwrite(f'{index}_{i}.jpg', img)
+#    cv2.imshow('image', img)
+#    cv2.waitKey(0)
+#    cv2.destroyAllWindows()
+    break
     
 draw_skeleton(index, keypoints_val[index], skeleton_limb_indices, val=True)
 
