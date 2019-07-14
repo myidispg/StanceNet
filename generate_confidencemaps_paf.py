@@ -25,7 +25,7 @@ keypoints_val = pickle.load(pickle_in)
 pickle_in.close()
 
 
-def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
+def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     """
     Generate confidence maps given all_keypoints dictionary.
     The generated confidence_maps are of shape: 
@@ -48,12 +48,6 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
     # For image in all images
     for image_id in indices:
         
-        img_name = get_image_name(image_id)
-        if val:
-            img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', img_name))
-        else:
-            img = cv2.imread(os.path.join(dataset_dir, 'new_train2017', img_name))
-        
         # For a person in the image
         for person in range(len(all_keypoints[image_id])):
             # For all keypoints in the image.
@@ -64,19 +58,28 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
                 # OpenCV has (im_height, im_width)
                 x_index = all_keypoints[image_id][person][part_num][0]
                 y_index = all_keypoints[image_id][person][part_num][1]
-                pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
+                visibility = all_keypoints[image_id][person][part_num][2]
                 
-#                print(f'pix1: {pix_1}, pix2: {pix_2}, pix3: {pix_3}')
+#                print(f'image_id: {image_id}')
+#                print(f'person: {person}')
+#                print(f'part_num: {part_num}')
+#                print(f'x_index: {x_index}, y_index: {y_index}')
+#                print(f'x_spread: {x_spread}\ty_spread: {y_spread}')
                 
-                norm = -((0-pix_1)**2) - ((0-pix_2)**2) - ((0-pix_3)**2)
+                # Generate heatmap only around the keypoint, leave others as 0
+                if visibility != 0:
+                    for i in range(x_index - (sigma//2), x_index + (sigma//2)):
+                        if i >= im_width:
+                            break
+                        for j in range(y_index - (sigma // 2), y_index + (sigma // 2)):
+                            if j >= im_height:
+                                break
+                            l2_norm_squared = ((i - x_index) ** 2) + ((j-y_index) ** 2)
+                            pixel_value = math.exp((-l2_norm_squared) / (sigma ** 2))
+                            
+                            conf_map[image_id % num_images, i, j, part_num] = pixel_value
+                            
                 
-#                print(math.exp((norm) / (sigma) ** 2))
-                
-                confidence_score = math.exp((norm) / (sigma) ** 2)
-                
-#                print(f'Confidence score: {confidence_score}')
-                
-                conf_map[image_id % num_images, x_index, y_index] = confidence_score
 #        break
         
     
@@ -84,16 +87,23 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
 
 #print(generate_confidence_maps(keypoints_val, im_width, im_height, num_joints, True).shape)
 
+import time
+
+time1 = time.time_ns() // 1000000 
 val_conf_maps = generate_confidence_maps(keypoints_val, range(64), val=True)
+time2 = time.time_ns() // 1000000 
+print(f'The operation took: {time2 - time1} milliseconds')
+print(np.sum(val_conf_maps[0, :, :, 0]))
 
 # Visualize a confidence map.
 index = 1
-img = np.ceil(val_conf_maps[index, :, :, 0]).astype(np.uint8)
-img = np.where(img > 0, 255, img)
-img = np.transpose(img)
-cv2.imshow('image', img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-draw_skeleton(16, keypoints_val[16], skeleton_limb_indices, val=True)
+for i in range(17):
+    img = val_conf_maps[index, :, :, i] * 255
+    img = np.transpose(img).astype(np.uint8)
+#    cv2.imwrite(f'{index}_{i}.jpg', img)
+    cv2.imshow('image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+draw_skeleton(index, keypoints_val[index], skeleton_limb_indices, val=True)
 

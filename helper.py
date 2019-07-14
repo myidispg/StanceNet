@@ -102,7 +102,7 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     cv2.destroyAllWindows()
     
 
-def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
+def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     """
     Generate confidence maps for a batch of indices.
     The generated confidence_maps are of shape: 
@@ -131,12 +131,6 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
     # For image in all images
     for image_id in indices:
         
-        img_name = get_image_name(image_id)
-        if val:
-            img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', img_name))
-        else:
-            img = cv2.imread(os.path.join(dataset_dir, 'new_train2017', img_name))
-        
         # For a person in the image
         for person in range(len(all_keypoints[image_id])):
             # For all keypoints for the person.
@@ -147,13 +141,21 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=1500):
                 # OpenCV has (im_height, im_width)
                 x_index = all_keypoints[image_id][person][part_num][0]
                 y_index = all_keypoints[image_id][person][part_num][1]
-                pix_1, pix_2, pix_3 = list(img[y_index, x_index, :])
+                visibility = all_keypoints[image_id][person][part_num][2]
                 
-                norm = -((0-pix_1)**2) - ((0-pix_2)**2) - ((0-pix_3)**2)
-                
-                confidence_score = math.exp((norm) / (sigma) ** 2)
-                
-                conf_map[image_id % num_images, x_index, y_index] = confidence_score
+                # Generate heatmap only around the keypoint, leave others as 0
+                if visibility != 0:
+                    for i in range(x_index - (sigma//2), x_index + (sigma//2)):
+                        if i >= im_width:
+                            break
+                        for j in range(y_index - (sigma // 2), y_index + (sigma // 2)):
+                            if j >= im_height:
+                                break
+                            l2_norm_squared = ((i - x_index) ** 2) + ((j-y_index) ** 2)
+                            pixel_value = math.exp((-l2_norm_squared) / (sigma ** 2))
+                            
+                            conf_map[image_id % num_images, i, j, part_num] = pixel_value
+
     
     return conf_map
 
