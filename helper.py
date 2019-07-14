@@ -269,3 +269,66 @@ def generate_paf(all_keypoints, indices, val=False):
                         paf[image_id % num_images, point[0], point[1], 1, i] = vector[1]
         
     return paf
+
+
+def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, val=False):
+    
+    # Necessary imports
+    import cv2
+    import os
+    
+    from constants import dataset_dir
+    from helper import generate_confidence_maps, get_image_name, generate_paf
+    
+    batch_count = len(all_keypoints.keys()) // batch_size
+    
+    count = 0
+    
+    # Loop over all keypoints in batches
+    for batch in range(1, batch_count * batch_size + 1, batch_size):
+        
+        count += 1
+        
+        images = np.zeros((batch_size, im_width, im_height, 3), dtype=np.uint8)
+        
+        # Loop over all individual indices in a batch
+        for image_id in range(batch, batch + batch_size):
+            img_name = get_image_name(image_id-1)
+            
+            if val:
+                img = cv2.imread(os.path.join(dataset_dir,'new_val2017',img_name))
+            else:
+                img = cv2.imread(os.path.join(dataset_dir,'new_train2017',img_name))
+            
+            images[image_id % batch] = img
+        
+        conf_maps = generate_confidence_maps(all_keypoints, range(batch-1, batch+batch_size-1))
+        pafs = generate_paf(all_keypoints, range(batch-1, batch+batch_size-1))
+    
+        yield count, images, conf_maps, pafs
+    
+    # Handle cases where the total size is not a multiple of batch_size
+    
+    if len(all_keypoints.keys()) % batch_size != 0:
+        
+        start_index = batch_size * batch_count
+        final_index = list(all_keypoints.keys())[-1]
+        
+#        print(final_index + 1 - start_index)
+        
+        images = np.zeros((final_index + 1 - start_index, im_width, im_height, 3), dtype=np.uint8)
+        
+        for image_id in range(start_index, final_index + 1):
+            img_name = get_image_name(image_id)
+            
+            if val:
+                img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', img_name))
+            else:
+                img = cv2.imread(os.path.join(dataset_dir, 'new_train2017', img_name))
+            
+            images[image_id % batch_size] = img
+            
+        conf_maps = generate_confidence_maps(all_keypoints, range(start_index, final_index + 1))
+        pafs = generate_paf(all_keypoints, range(start_index, final_index + 1))
+        
+        yield count + 1, images, conf_maps, pafs

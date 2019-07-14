@@ -12,7 +12,7 @@ import cv2
 
 import numpy as np
 
-img = cv2.imread(os.path.join(dataset_dir,'new_val2017/000000000000.jpg'))
+#img = cv2.imread(os.path.join(dataset_dir,'new_val2017/000000000000.jpg'))
 
 from constants import dataset_dir
 from helper import generate_confidence_maps, get_image_name, generate_paf
@@ -27,6 +27,10 @@ keypoints_val = pickle.load(pickle_in)
 pickle_in.close()
 
 def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, val=False):
+    
+    # Necessary imports
+    from constants import dataset_dir
+    from helper import generate_confidence_maps, get_image_name, generate_paf
     
     batch_count = len(all_keypoints.keys()) // batch_size
     
@@ -81,5 +85,5 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
         
         yield count + 1, images, conf_maps, pafs
         
-for batch, images, conf_maps, pafs in gen_data(keypoints_train, 64, 240, 240):
+for batch, images, conf_maps, pafs in gen_data(keypoints_train, 64, 224, 224):
     print(f'batch: {batch}\timages: {images.shape}\tconf_map: {conf_maps.shape}\tpafs: {pafs.shape}')
