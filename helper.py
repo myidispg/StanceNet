@@ -213,7 +213,7 @@ def bressenham_line(start, end):
     return points_bet
     
 
-def generate_paf(all_keypoints, indices, val=False):
+def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=False):
     """
     Generate Part Affinity Fields given a batch of keypoints.
     Inputs:
@@ -221,6 +221,7 @@ def generate_paf(all_keypoints, indices, val=False):
         dictionary that contains image_id as keys and keypoints for each person.
         indices: The list of indices from the keypoints for which PAFs are to 
         be generated.
+        skeleton_limb_indices: The indices to create limbs from joints.
         val(Default=False): True if validation set, False otherwise. 
         
     Outputs:
@@ -231,8 +232,7 @@ def generate_paf(all_keypoints, indices, val=False):
     import cv2
     import os
     import numpy as np
-    from constants import dataset_dir, im_width, im_height, num_joints, skeleton_limb_indices
-    
+    from constants import dataset_dir, im_width, im_height, num_joints
     
     num_images = len(indices)
     
@@ -240,36 +240,39 @@ def generate_paf(all_keypoints, indices, val=False):
     
     # For image in all_images
     for image_id in indices:
-        
         # For each person in the image
         for person in range(len(all_keypoints[image_id])):
             # For each limb in the skeleton
-            for i in range(len(skeleton_limb_indices)):
+            for limb in range(len(skeleton_limb_indices)):
                 
-                limb_indices = skeleton_limb_indices[i]
+                limb_indices = skeleton_limb_indices[limb]
                 
                 joint_one_index = limb_indices[0] - 1
                 joint_two_index = limb_indices[1] - 1
+                
+                joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index])
+                joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index])
+                
                 # If there is 0 for visibility, skip the limb
-                if all_keypoints[image_id][person][joint_one_index][2] == 0 or all_keypoints[image_id][person][joint_two_index][2] == 0:
-                    pass
-                else:
+                if all_keypoints[image_id][person][joint_one_index][2] != 0 and all_keypoints[image_id][person][joint_two_index][2] != 0:
                     joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
                     joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
+
+                    norm = ((joint_one_loc[0] - joint_two_loc[0]) ** 2 + (joint_one_loc[1] - joint_two_loc[1]) ** 2) ** (1/2)
+
+                    vector = (joint_two_loc - joint_one_loc)/norm
+
+                    # https://gamedev.stackexchange.com/questions/70075/how-can-i-find-the-perpendicular-to-a-2d-vector
+                    perpendicular_vec = [-vector[1], vector[0]]
                     
-                    norm = np.linalg.norm(joint_two_loc - joint_one_loc, ord=2)
-                    
-                    if norm == 0:
-                        vector = joint_two_loc - joint_one_loc
-                    else:
-                        vector = (joint_two_loc - joint_one_loc)/norm
-                    
-                    
-                    line_points = bressenham_line(joint_one_loc, joint_two_loc)
-                    for point in line_points:
-                        paf[image_id % num_images, point[0], point[1], 0, i] = vector[0]
-                        paf[image_id % num_images, point[0], point[1], 1, i] = vector[1]
-        
+                    for i in range(im_width):
+                        for j in range(im_height):
+                            distance_vec = [i-joint_one_loc[0],j-joint_one_loc[1]]
+                            if 0 <= np.dot(vector, distance_vec) <= norm:
+                                if abs(np.dot(perpendicular_vec, distance_vec)) <= sigma:
+                                    paf[image_id % num_images, i, j, 0, limb] = vector[0]
+                                    paf[image_id % num_images, i, j, 1, limb] = vector[1]
+
     return paf
 
 

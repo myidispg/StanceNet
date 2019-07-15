@@ -23,7 +23,7 @@ keypoints_val = pickle.load(pickle_in)
 
 pickle_in.close()
 
-def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
+def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=False):
     """
     Generate Part Affinity Fields given a batch of keypoints.
     Inputs:
@@ -50,57 +50,86 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, val=False):
     
     # For image in all_images
     for image_id in indices:
-        
+        print(f'Image: {image_id}')
         # For each person in the image
         for person in range(len(all_keypoints[image_id])):
             # For each limb in the skeleton
-            for i in range(len(skeleton_limb_indices)):
+            for limb in range(len(skeleton_limb_indices)):
                 
-                limb_indices = skeleton_limb_indices[i]
+                limb_indices = skeleton_limb_indices[limb]
                 
                 joint_one_index = limb_indices[0] - 1
                 joint_two_index = limb_indices[1] - 1
+                
+                joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index])
+                joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index])
+                
+#                if image_id == 0:
+#                    print(f'limb: {limb}')
+#                    print(f'joint 1: {joint_one_index}, joint 2: {joint_two_index}')
+#                    print(f'joint_one_loc: {joint_one_loc}\tjoint_two_loc: {joint_two_loc}')
+                
                 # If there is 0 for visibility, skip the limb
-                if all_keypoints[image_id][person][joint_one_index][2] == 0 or all_keypoints[image_id][person][joint_two_index][2] == 0:
-                    pass
-                else:
+                if all_keypoints[image_id][person][joint_one_index][2] != 0 and all_keypoints[image_id][person][joint_two_index][2] != 0:
                     joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
                     joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
+#                    print(f'joint_one_loc: {joint_one_loc}\tjoint_two_loc: {joint_two_loc}')
                     
-                    norm = np.linalg.norm(joint_two_loc - joint_one_loc, ord=2)
+#                    norm = np.linalg.norm(joint_two_loc - joint_one_loc, ord=2)
+                    norm = ((joint_one_loc[0] - joint_two_loc[0]) ** 2 + (joint_one_loc[1] - joint_two_loc[1]) ** 2) ** (1/2)
+#                    
+#                    if norm == 0:
+#                        break
+#                    else:
+#                        vector = (joint_two_loc - joint_one_loc)/norm
+                    vector = (joint_two_loc - joint_one_loc)/norm
+#                    print(f'vector: {vector}')
+#                    print(f'norm: {norm}')                    
+                    # Found how to get perpendicular 2-d vector here: 
+                    # https://gamedev.stackexchange.com/questions/70075/how-can-i-find-the-perpendicular-to-a-2d-vector
+                    perpendicular_vec = [-vector[1], vector[0]]
+#                    print(f'vector: {vector}')
+#                    print(f'Perpendicular: {perpendicular_vector}')
                     
-                    if norm == 0:
-                        vector = joint_two_loc - joint_one_loc
-                    else:
-                        vector = (joint_two_loc - joint_one_loc)/norm
-                    
-                    
-                    line_points = bressenham_line(joint_one_loc, joint_two_loc)
-                    for point in line_points:
-                        paf[image_id % num_images, point[0], point[1], 0, i] = vector[0]
-                        paf[image_id % num_images, point[0], point[1], 1, i] = vector[1]
-        
+                    for i in range(im_width):
+                        for j in range(im_height):
+                            distance_vec = [i-joint_one_loc[0],j-joint_one_loc[1]]
+#                            print(f'dis_vec: {distance_vec}')
+                            if 0 <= np.dot(vector, distance_vec) <= norm:
+                                if abs(np.dot(perpendicular_vec, distance_vec)) <= sigma:
+#                                    print(f'i: {i}, j: {j}, limb: {limb}')
+                                    paf[image_id % num_images, i, j, 0, limb] = vector[0]
+                                    paf[image_id % num_images, i, j, 1, limb] = vector[1]
+
+#                    print(np.dot(vector, perpendicular_vector))
+#                    
+#                    line_points = bressenham_line(joint_one_loc, joint_two_loc)
+#                    for point in line_points:
+#                        paf[image_id % num_images, point[0], point[1], 0, i] = vector[0]
+#                        paf[image_id % num_images, point[0], point[1], 1, i] = vector[1]
+#        
+#        break
     return paf
 
 import time
 
 time1 = time.time_ns() // 1000000 
-val_paf = generate_paf(keypoints_train, range(64), skeleton_limb_indices, False)
+val_paf = generate_paf(keypoints_val, range(10), skeleton_limb_indices, 2, False)
 time2 = time.time_ns() // 1000000 
 print(f'The operation took: {time2 - time1} milliseconds')
-print(val_paf.shape)
-print(val_paf[0, :, : , 0, 2])
+
 
 # Visualize a paf for a joint
-img_index = 1
-for i in range(len(skeleton_limb_indices)):
-    limb_index = i
-    img = val_paf[img_index, :, :, 0, limb_index]
-    img = img.transpose()
-#    img = np.ceil(val_paf[img_index, :, :, 0, limb_index]).astype(np.uint8)
-    img = np.where(img != 0, 255, img).astype(np.uint8)
-    cv2.imshow('image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-draw_skeleton(img_index, keypoints_val[img_index], skeleton_limb_indices, val=True)
+for img_index in range(10):
+    for i in range(len(skeleton_limb_indices)):
+        limb_index = i
+        print(i)
+        img = val_paf[img_index, :, :, 0, limb_index] + val_paf[img_index, :, :, 0, limb_index]
+        img = img.transpose()
+    #    img = np.ceil(val_paf[img_index, :, :, 0, limb_index]).astype(np.uint8)
+        img = np.where(img != 0, 255, img).astype(np.uint8)
+        cv2.imshow('image', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    
+    draw_skeleton(img_index, keypoints_val[img_index], skeleton_limb_indices, val=True)
