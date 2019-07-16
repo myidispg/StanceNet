@@ -213,7 +213,7 @@ def bressenham_line(start, end):
     return points_bet
     
 
-def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=False):
+def generate_paf(all_keypoints, indices, sigma=5, val=False):
     """
     Generate Part Affinity Fields given a batch of keypoints.
     Inputs:
@@ -221,7 +221,7 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
         dictionary that contains image_id as keys and keypoints for each person.
         indices: The list of indices from the keypoints for which PAFs are to 
         be generated.
-        skeleton_limb_indices: The indices to create limbs from joints.
+        sigma: The width of a limb in pixels.
         val(Default=False): True if validation set, False otherwise. 
         
     Outputs:
@@ -232,7 +232,7 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
     import cv2
     import os
     import numpy as np
-    from constants import dataset_dir, im_width, im_height, num_joints
+    from constants import dataset_dir, im_width, im_height, num_joints, skeleton_limb_indices
     
     num_images = len(indices)
     
@@ -281,6 +281,7 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
     # Necessary imports
     import cv2
     import os
+    import numpy as np
     
     from constants import dataset_dir
     from helper import generate_confidence_maps, get_image_name, generate_paf

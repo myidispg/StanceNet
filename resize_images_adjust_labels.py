@@ -9,8 +9,8 @@ import os
 import pickle
 import cv2
 
-from constants import dataset_dir, im_width, im_height, skeleton_limb_indices
-from helper import get_image_name, draw_skeleton
+from utilities.constants import dataset_dir, im_width, im_height, skeleton_limb_indices
+from utilities.helper import get_image_name, draw_skeleton
 
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_val.pickle'), 'rb')
 keypoints_val = pickle.load(pickle_in)

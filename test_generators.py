@@ -14,8 +14,8 @@ import numpy as np
 
 #img = cv2.imread(os.path.join(dataset_dir,'new_val2017/000000000000.jpg'))
 
-from constants import dataset_dir
-from helper import generate_confidence_maps, get_image_name, generate_paf
+from utilities.constants import dataset_dir
+from utilities.helper import generate_confidence_maps, get_image_name, generate_paf
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
@@ -29,8 +29,8 @@ pickle_in.close()
 def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, val=False):
     
     # Necessary imports
-    from constants import dataset_dir
-    from helper import generate_confidence_maps, get_image_name, generate_paf
+    from utilities.constants import dataset_dir
+    from utilities.helper import generate_confidence_maps, get_image_name, generate_paf
     
     batch_count = len(all_keypoints.keys()) // batch_size
     
