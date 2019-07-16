@@ -68,7 +68,7 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
 #                    print(f'limb: {limb}')
 #                    print(f'joint 1: {joint_one_index}, joint 2: {joint_two_index}')
 #                    print(f'joint_one_loc: {joint_one_loc}\tjoint_two_loc: {joint_two_loc}')
-                
+#                
                 # If there is 0 for visibility, skip the limb
                 if all_keypoints[image_id][person][joint_one_index][2] != 0 and all_keypoints[image_id][person][joint_two_index][2] != 0:
                     joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
@@ -99,8 +99,8 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
                     cond_3 = across_limb <= sigma
                     mask = cond_1 & cond_2 & cond_3
                     
-                    paf[image_id % num_images, :, :, 0, limb] += mask * vector[0]
-                    paf[image_id % num_images, :, :, 1, limb] += mask * vector[1]
+                    paf[image_id % num_images, :, :, 0, limb] += np.transpose(mask) * vector[0]
+                    paf[image_id % num_images, :, :, 1, limb] += np.transpose(mask) * vector[1]
                     
 #                    for i in range(im_width):
 #                        for j in range(im_height):
@@ -124,14 +124,13 @@ val_paf = generate_paf(keypoints_val, range(10), skeleton_limb_indices, 2, False
 time2 = time.time_ns() // 1000000 
 print(f'The operation took: {time2 - time1} milliseconds')
 
+test = val_paf[0, :, :, 0, 5] +  val_paf[0, :, :, 1, 5]
 
 # Visualize a paf for a joint
 for img_index in range(10):
-    for i in range(len(skeleton_limb_indices)):
-        limb_index = i
-        print(i)
+    for limb_index in range(len(skeleton_limb_indices)):
         img = val_paf[img_index, :, :, 0, limb_index] + val_paf[img_index, :, :, 0, limb_index]
-#        img = img.transpose()
+        img = img.transpose()
     #    img = np.ceil(val_paf[img_index, :, :, 0, limb_index]).astype(np.uint8)
         img = np.where(img != 0, 255, img).astype(np.uint8)
         cv2.imshow('image', img)
@@ -139,4 +138,7 @@ for img_index in range(10):
         cv2.destroyAllWindows()
     
     draw_skeleton(img_index, keypoints_val[img_index], skeleton_limb_indices, val=True)
+    
+    if img_index == 1:
+        break
     

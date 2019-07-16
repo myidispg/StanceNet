@@ -265,14 +265,20 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
                     # https://gamedev.stackexchange.com/questions/70075/how-can-i-find-the-perpendicular-to-a-2d-vector
                     perpendicular_vec = [-vector[1], vector[0]]
                     
-                    for i in range(im_width):
-                        for j in range(im_height):
-                            distance_vec = [i-joint_one_loc[0],j-joint_one_loc[1]]
-                            if 0 <= np.dot(vector, distance_vec) <= norm:
-                                if abs(np.dot(perpendicular_vec, distance_vec)) <= sigma:
-                                    paf[image_id % num_images, i, j, 0, limb] = vector[0]
-                                    paf[image_id % num_images, i, j, 1, limb] = vector[1]
-
+                    x, y = np.meshgrid(np.arange(im_width), np.arange(im_height))
+                    # Formula according to the paper
+                    along_limb = vector[0] * (x-joint_one_loc[0]) + vector[1] * (y-joint_one_loc[1])
+                    across_limb = np.abs(perpendicular_vec[0] * (x-joint_one_loc[0]) + perpendicular_vec[1] * (y - joint_one_loc[1])) 
+                    
+                    # Check the given conditions
+                    cond_1 = along_limb >= 0
+                    cond_2 = along_limb <= norm
+                    cond_3 = across_limb <= sigma
+                    mask = cond_1 & cond_2 & cond_3
+                    
+                    # put the values
+                    paf[image_id % num_images, :, :, 0, limb] += np.transpose(mask) * vector[0]
+                    paf[image_id % num_images, :, :, 1, limb] += np.transpose(mask) * vector[1]
     return paf
 
 
