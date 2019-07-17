@@ -94,10 +94,16 @@ time2 = time.time_ns() // 1000000
 print(f'The operation took: {time2 - time1} milliseconds')
 
 # Visualize a confidence map.
-index = 24
+heatmap_global = np.zeros((224, 224))
+
+index = 1
 for i in range(17):
-    img = (val_conf_maps[index, :, :, i] * 255).astype(np.uint8)
-    img = np.transpose(img).astype(np.uint8)
+    heatmap = (val_conf_maps[index, :, :, i] * 255)
+    heatmap = np.transpose(heatmap).astype(np.uint8)
+    heatmap_global += heatmap
+    img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', get_image_name(index)))
+    colored = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+    img = cv2.addWeighted(img, 0.6, colored, 0.4, 0)
 #    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 #    img = cv2.resize(img, (700, 700))
 #    cv2.imwrite(f'{index}_{i}.jpg', img)
@@ -105,6 +111,14 @@ for i in range(17):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 #    break
-    
+
+heatmap_global = heatmap_global.astype(np.uint8)
+img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', get_image_name(index)))
+colored = cv2.applyColorMap(heatmap_global, cv2.COLORMAP_JET)
+img = cv2.addWeighted(img, 0.6, colored, 0.4, 0)
+cv2.imshow('image', img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
 draw_skeleton(index, keypoints_val[index], skeleton_limb_indices, val=True)
 

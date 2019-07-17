@@ -11,8 +11,8 @@ import cv2
 import pickle
 import os
 
-from constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
-from helper import get_image_name, draw_skeleton, bressenham_line
+from utilities.constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
+from utilities.helper import get_image_name, draw_skeleton, bressenham_line
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
@@ -42,7 +42,7 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
     import cv2
     import os
     import numpy as np
-    from constants import dataset_dir, im_width, im_height, num_joints
+    from utilities.constants import dataset_dir, im_width, im_height, num_joints
     
     num_images = len(indices)
     
@@ -50,9 +50,11 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
     
     # For image in all_images
     for image_id in indices:
-        print(f'Image: {image_id}')
+#        print(f'Image: {image_id}')
+        
         # For each person in the image
         for person in range(len(all_keypoints[image_id])):
+            
             # For each limb in the skeleton
             for limb in range(len(skeleton_limb_indices)):
                 
@@ -75,14 +77,12 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
                     joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
 #                    print(f'joint_one_loc: {joint_one_loc}\tjoint_two_loc: {joint_two_loc}')
                     
-#                    norm = np.linalg.norm(joint_two_loc - joint_one_loc, ord=2)
-                    norm = ((joint_one_loc[0] - joint_two_loc[0]) ** 2 + (joint_one_loc[1] - joint_two_loc[1]) ** 2) ** (1/2)
+                    part_line_segment = joint_two_loc - joint_one_loc
+                    norm = np.linalg.norm(part_line_segment)
 #                    
-#                    if norm == 0:
-#                        break
-#                    else:
-#                        vector = (joint_two_loc - joint_one_loc)/norm
-                    vector = (joint_two_loc - joint_one_loc)/norm
+                    norm = norm + 1e-8 if norm == 0 else norm # To make sure it is not equal to zero.
+
+                    vector = (part_line_segment)/norm
 #                    print(f'vector: {vector}')
 #                    print(f'norm: {norm}')                    
                     # Found how to get perpendicular 2-d vector here: 
@@ -97,23 +97,11 @@ def generate_paf(all_keypoints, indices, skeleton_limb_indices, sigma=5, val=Fal
                     cond_1 = along_limb >= 0
                     cond_2 = along_limb <= norm
                     cond_3 = across_limb <= sigma
-                    mask = cond_1 & cond_2 & cond_3
+                    mask = (cond_1 & cond_2 & cond_3).astype(np.float32)
                     
-                    paf[image_id % num_images, :, :, 0, limb] += np.transpose(mask) * vector[0]
-                    paf[image_id % num_images, :, :, 1, limb] += np.transpose(mask) * vector[1]
+                    paf[image_id % num_images, :, :, 0, limb] += (np.transpose(mask) * vector[0])
+                    paf[image_id % num_images, :, :, 1, limb] += (np.transpose(mask) * vector[1])
                     
-#                    for i in range(im_width):
-#                        for j in range(im_height):
-#                            distance_vec = [i-joint_one_loc[0],j-joint_one_loc[1]]
-##                            print(f'dis_vec: {distance_vec}')
-#                            if 0 <= np.dot(vector, distance_vec) <= norm:
-#                                if abs(np.dot(perpendicular_vec, distance_vec)) <= sigma:
-##                                    print(f'i: {i}, j: {j}, limb: {limb}')
-#                                    paf[image_id % num_images, i, j, 0, limb] = vector[0]
-#                                    paf[image_id % num_images, i, j, 1, limb] = vector[1]
-
-#                    print(np.dot(vector, perpendicular_vector))
-#        
 #        break
     return paf
 
@@ -124,21 +112,20 @@ val_paf = generate_paf(keypoints_val, range(10), skeleton_limb_indices, 2, False
 time2 = time.time_ns() // 1000000 
 print(f'The operation took: {time2 - time1} milliseconds')
 
-test = val_paf[0, :, :, 0, 5] +  val_paf[0, :, :, 1, 5]
-
-# Visualize a paf for a joint
+# Visualize all PAFs for each image
 for img_index in range(10):
+    global_heatmap = np.zeros((224, 224)).astype(np.uint8)
+    
     for limb_index in range(len(skeleton_limb_indices)):
-        img = val_paf[img_index, :, :, 0, limb_index] + val_paf[img_index, :, :, 0, limb_index]
-        img = img.transpose()
-    #    img = np.ceil(val_paf[img_index, :, :, 0, limb_index]).astype(np.uint8)
-        img = np.where(img != 0, 255, img).astype(np.uint8)
-        cv2.imshow('image', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        heatmap = val_paf[img_index, :, :, 0, limb_index] + val_paf[img_index, :, :, 0, limb_index]
+        heatmap *= 255
+        heatmap = heatmap.transpose().astype(np.uint8)
+        global_heatmap += heatmap
     
+    img = cv2.imread(os.path.join(dataset_dir, 'new_val2017', get_image_name(img_index)))
+    colored = cv2.applyColorMap(global_heatmap, cv2.COLORMAP_JET)
+    img = cv2.addWeighted(img, 0.8, colored, 0.5, 0)
+    cv2.imshow('image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     draw_skeleton(img_index, keypoints_val[img_index], skeleton_limb_indices, val=True)
-    
-    if img_index == 1:
-        break
-    

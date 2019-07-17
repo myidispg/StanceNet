@@ -157,58 +157,6 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     return conf_map
 
 
-def sign(x):
-    
-    if x < 0:
-        return -1
-    elif x == 0:
-        return 0
-    else: 
-        return 1
-
-def bressenham_line(start, end):
-    
-    points_bet = list()
-    
-    x1, y1 = start[0], start[1]
-    x2, y2 = end[0], end[1]
-    
-    x = x1
-    y = y1
-    
-    dx = abs(x2 - x1)
-    dy = abs(y2 - y1)
-    
-    s1 = sign(x2-x1)
-    s2 = sign(y2 - y1)
-    
-    if dy > dx:
-        dx, dy = dy, dx
-        interchange = 1
-    else:
-        interchange = 0
-    
-    e = 2 * dy - dx
-    a = 2 * dy
-    b = 2 * dy - 2 * dx
-    
-    
-    points_bet.append((x, y))
-    for i in range(dx):
-        if e < 0:
-            if interchange == 1:
-                y += s2
-            else:
-                x += s1
-            e += a
-        else:
-            y += s2
-            x += s1
-            e += b
-        points_bet.append((x, y))
-    
-    return points_bet
-    
 
 def generate_paf(all_keypoints, indices, sigma=5, val=False):
     """
@@ -255,9 +203,12 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
                     joint_one_loc = np.asarray(all_keypoints[image_id][person][joint_one_index][:2])
                     joint_two_loc = np.asarray(all_keypoints[image_id][person][joint_two_index][:2])
 
-                    norm = ((joint_one_loc[0] - joint_two_loc[0]) ** 2 + (joint_one_loc[1] - joint_two_loc[1]) ** 2) ** (1/2)
+                    part_line_segment = joint_two_loc - joint_one_loc
+                    norm = np.linalg.norm(part_line_segment)
 
-                    vector = (joint_two_loc - joint_one_loc)/norm
+                    norm = norm + 1e-8 if norm == 0 else norm # To make sure it is not equal to zero.
+
+                    vector = (part_line_segment)/norm
 
                     # https://gamedev.stackexchange.com/questions/70075/how-can-i-find-the-perpendicular-to-a-2d-vector
                     perpendicular_vec = [-vector[1], vector[0]]
@@ -271,7 +222,7 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
                     cond_1 = along_limb >= 0
                     cond_2 = along_limb <= norm
                     cond_3 = across_limb <= sigma
-                    mask = cond_1 & cond_2 & cond_3
+                    mask = (cond_1 & cond_2 & cond_3).astype(np.float32)
                     
                     # put the values
                     paf[image_id % num_images, :, :, 0, limb] += np.transpose(mask) * vector[0]
@@ -286,8 +237,8 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
     import os
     import numpy as np
     
-    from constants import dataset_dir
-    from helper import generate_confidence_maps, get_image_name, generate_paf
+    from utilities.constants import dataset_dir
+    from utilities.helper import generate_confidence_maps, get_image_name, generate_paf
     
     batch_count = len(all_keypoints.keys()) // batch_size
     
