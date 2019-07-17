@@ -12,8 +12,8 @@ import os
 import cv2
 #im = cv2.imread('Coco_Dataset/new_val2017/000000000000.jpg', cv2.IMREAD_COLOR)
 
-from constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
-from helper import get_image_name, draw_skeleton
+from utilities.constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
+from utilities.helper import get_image_name, draw_skeleton
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
@@ -41,6 +41,7 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     """
     import math
     
+    
     num_images = len(indices)
     
     conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.float16)
@@ -48,11 +49,12 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     # For image in all images
     for image_id in indices:
         
+        heatmap_image = np.zeros((im_width, im_height, num_joints))
+        
         # For a person in the image
         for person in range(len(all_keypoints[image_id])):
             # For all keypoints in the image.
             for part_num in range(len(all_keypoints[image_id][person])):
-#            for keypoint in all_keypoints[image_id][person]:
                 # Get the pixel values at a given keypoint across all 3 channels.
                 # Note that our labels have images (im_width, im_height),
                 # OpenCV has (im_height, im_width)
@@ -68,18 +70,17 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
                 
                 # Generate heatmap only around the keypoint, leave others as 0
                 if visibility != 0:
-                    for i in range(x_index - (sigma//2), x_index + (sigma//2)):
-                        if i >= im_width:
-                            break
-                        for j in range(y_index - (sigma // 2), y_index + (sigma // 2)):
-                            if j >= im_height:
-                                break
-                            l2_norm_squared = ((i - x_index) ** 2) + ((j-y_index) ** 2)
-                            pixel_value = math.exp((-l2_norm_squared) / (sigma ** 2))
-                            
-                            conf_map[image_id % num_images, i, j, part_num] = pixel_value
-                            
-                
+                    x_ind, y_ind = np.meshgrid(np.arange(im_width), np.arange(im_height))
+                    numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
+                    heatmap_joint = np.exp(numerator/sigma)
+                    heatmap_image[:, :, part_num] = np.maximum(heatmap_joint, heatmap_image[:, :, part_num])
+                    
+                    
+                    conf_map[image_id % num_images, :, :, :] = heatmap_image                         
+            
+            # Find max of heatmaps for all persons.
+            
+            
 #        break
         
     
@@ -93,17 +94,17 @@ time2 = time.time_ns() // 1000000
 print(f'The operation took: {time2 - time1} milliseconds')
 
 # Visualize a confidence map.
-index = 1
+index = 24
 for i in range(17):
     img = (val_conf_maps[index, :, :, i] * 255).astype(np.uint8)
-#    img = np.transpose(img).astype(np.uint8)
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    img = cv2.resize(img, (700, 700))
-    cv2.imwrite(f'{index}_{i}.jpg', img)
-#    cv2.imshow('image', img)
-#    cv2.waitKey(0)
-#    cv2.destroyAllWindows()
-    break
+    img = np.transpose(img).astype(np.uint8)
+#    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+#    img = cv2.resize(img, (700, 700))
+#    cv2.imwrite(f'{index}_{i}.jpg', img)
+    cv2.imshow('image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+#    break
     
 draw_skeleton(index, keypoints_val[index], skeleton_limb_indices, val=True)
 

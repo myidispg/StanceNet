@@ -60,7 +60,7 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     import cv2
     import os
     
-    from constants import dataset_dir
+    from utilities.constants import dataset_dir
     
     image_name = get_image_name(image_id)
     
@@ -118,11 +118,10 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     """
     
     # Necessary imports for this function.
-    import math
     import cv2
     import os
     import numpy as np
-    from constants import dataset_dir, im_width, im_height, num_joints
+    from utilities.constants import dataset_dir, im_width, im_height, num_joints
     
     num_images = len(indices)
     
@@ -130,6 +129,8 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     
     # For image in all images
     for image_id in indices:
+        
+        heatmap_image = np.zeros((im_width, im_height, num_joints))
         
         # For a person in the image
         for person in range(len(all_keypoints[image_id])):
@@ -145,17 +146,13 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
                 
                 # Generate heatmap only around the keypoint, leave others as 0
                 if visibility != 0:
-                    for i in range(x_index - (sigma//2), x_index + (sigma//2)):
-                        if i >= im_width:
-                            break
-                        for j in range(y_index - (sigma // 2), y_index + (sigma // 2)):
-                            if j >= im_height:
-                                break
-                            l2_norm_squared = ((i - x_index) ** 2) + ((j-y_index) ** 2)
-                            pixel_value = math.exp((-l2_norm_squared) / (sigma ** 2))
-                            
-                            conf_map[image_id % num_images, i, j, part_num] = pixel_value
-
+                    x_ind, y_ind = np.meshgrid(np.arange(im_width), np.arange(im_height))
+                    numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
+                    heatmap_joint = np.exp(numerator/sigma)
+                    heatmap_image[:, :, part_num] = np.maximum(heatmap_joint, heatmap_image[:, :, part_num])
+                    
+                    
+                    conf_map[image_id % num_images, :, :, :] = heatmap_image        
     
     return conf_map
 
@@ -232,7 +229,7 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
     import cv2
     import os
     import numpy as np
-    from constants import dataset_dir, im_width, im_height, num_joints, skeleton_limb_indices
+    from utilities.constants import dataset_dir, im_width, im_height, num_joints, skeleton_limb_indices
     
     num_images = len(indices)
     
