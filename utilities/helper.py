@@ -112,7 +112,7 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
         dictionary that contains image_id as keys and keypoints for each person.
         indices: a list of indices for which the conf_maps are to be generated.
         val: True if used for validation set, else false
-        sigma: used to generate the confidence score. Higher values lead higher score.
+        sigma: used to control the spread of the peak.
     Output:
         conf_map: A numpy array of shape: (batch_size, im_width, im_height, num_joints)
     """
