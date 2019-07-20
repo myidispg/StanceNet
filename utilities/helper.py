@@ -309,6 +309,10 @@ def find_joints(confidence_maps, threshold = 0.7):
         joints. Each joint is of following format: (x, y, confidence_score)
     """
     
+    import numpy as np
+    from scipy.ndimage.filters import maximum_filter
+    from scipy.ndimage.morphology import generate_binary_structure
+    
     # Check if the input is of expected shape
     assert len(confidence_maps.shape) == 3, "Wrong input confidence map shape."
     

@@ -4,9 +4,20 @@ Created on Sun Jul 14 15:04:52 2019
 
 @author: myidispg
 """
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torchvision.models as models
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+vgg = models.vgg19(pretrained=True)
+list(vgg.children())[0]
+
+model = nn.Sequential(nn.ConvTranspose2d(17, 17, 55, 13)).to(device)
+output = model(torch.from_numpy(np.ones((8, 17, 14, 14), dtype=np.float16)).float().to(device))
+print(output.shape)
 
 # Extract the first 10 layers of the VGG-19 model.
 class VGGFeatureExtractor(nn.Module):
@@ -23,12 +34,12 @@ class VGGFeatureExtractor(nn.Module):
         super(VGGFeatureExtractor, self).__init__()
         if batch_normalization:
             print('Downloading pre-trained VGG 19 model...')
-            vgg = models.vgg19(pretrained=True, progress=True)
-            vgg = list(list(vgg.children())[0].children())[:33]
+            vgg = models.vgg19(pretrained=True)
+            vgg = list(list(vgg.children())[0].children())[:11]
         else:
             print('Downloading pre-trained VGG 19 model...')
-            vgg = models.vgg19_bn(pretrained=True, progress=True)
-            vgg = list(list(model.children())[0].children())[:23]
+            vgg = models.vgg19_bn(pretrained=True)
+            vgg = list(list(vgg.children())[0].children())[:23]
         
         self.vgg = nn.Sequential(*vgg)
     
@@ -37,12 +48,16 @@ class VGGFeatureExtractor(nn.Module):
         
         return features
             
-vgg_model1 = VGGFeatureExtractor(True).double()
-features1 = vgg_model1.forward(torch.from_numpy(np.ones((1, 3, 224, 224))))
 
-vgg_model2 = VGGFeatureExtractor(True).double()
-features2 = vgg_model2.forward(torch.from_numpy(np.ones((1, 3, 224, 224))))
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+#import numpy as np
+
+#torch.cuda.empty_cache()
+#vgg_model1 = VGGFeatureExtractor(False).to(device)
+#features1 = vgg_model1.forward(torch.from_numpy(np.ones((8, 3, 224, 224), dtype=np.float16)).float().to(device))
+#print(features1.shape)
 
 
+#torch.cuda.empty_cache()
 # Output features are of the shape: (batch_size, 521, 14, 14)
-torch.all(torch.eq(features1, features2))
