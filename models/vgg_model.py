@@ -10,15 +10,6 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-vgg = models.vgg19(pretrained=True)
-list(vgg.children())[0]
-
-model = nn.Sequential(nn.ConvTranspose2d(17, 17, 55, 13)).to(device)
-output = model(torch.from_numpy(np.ones((8, 17, 14, 14), dtype=np.float16)).float().to(device))
-print(output.shape)
-
 # Extract the first 10 layers of the VGG-19 model.
 class VGGFeatureExtractor(nn.Module):
     def __init__(self, batch_normalization=True):
