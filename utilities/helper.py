@@ -100,7 +100,27 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     cv2.imshow('image', img)
     cv2.waitKey(wait_time)
     cv2.destroyAllWindows()
+ 
     
+def affine_transform(img, scale):
+    """
+    Takes an image and perform scaling affine transformation on it.
+    Inputs: 
+        img: the image on which to apply the transform
+        scale: The factor by which to scale. 
+    Outputs:
+        tranformed image is returned.
+    """
+    import cv2
+    import numpy as np
+    
+    print(f'here: {img.shape}')
+    
+    transformation_matrix = [[scale, 0, 0], [0, scale, 0]]
+    rows, cols = img.shape[0], img.shape[1]
+    
+    transformation_matrix = np.asarray(transformation_matrix, dtype=np.float32)
+    return cv2.warpAffine(np.float32(img), transformation_matrix, (int(cols*scale), int(rows*scale)))
 
 def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     """
@@ -118,8 +138,6 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     """
     
     # Necessary imports for this function.
-    import cv2
-    import os
     import numpy as np
     from utilities.constants import dataset_dir, im_width_small, im_height_small
     from utilities.constants import im_height, im_width, num_joints
@@ -151,10 +169,10 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
                     numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
                     heatmap_joint = np.exp(numerator/sigma)
                     heatmap_image[:, :, part_num] = np.maximum(heatmap_joint, heatmap_image[:, :, part_num])
-                    heatmap_image[:, :, part_num] = cv2.resize(heatmap_image[:,:, part_num], (im_width_small, im_height_small))
+#                    heatmap_image[:, :, part_num] = affine_transform(heatmap_image[:, :, part_num], 0.25)
+#                    print(f'{heatmap_image.shape}')
                     
-                    
-                    conf_map[image_id % num_images, :, :, :] = heatmap_image        
+                    conf_map[image_id % num_images, :, :, :] = affine_transform(heatmap_image, 0.25)       
     
     return conf_map
 
