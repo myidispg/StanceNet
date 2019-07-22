@@ -87,3 +87,4 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
         
 for batch, images, conf_maps, pafs in gen_data(keypoints_val, 64, 224, 224, True):
     print(f'batch: {batch}\timages: {images.shape}\tconf_map: {conf_maps.shape}\tpafs: {pafs.shape}')
+    break

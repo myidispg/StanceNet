@@ -9,8 +9,11 @@ import os
 
 im_height = 224
 im_width = 224
+im_height_small = 56
+im_width_small = 56
 
 num_joints = 17
+num_limbs = 15
 
 # Used in creating confidence maps.
 sigma = 1500

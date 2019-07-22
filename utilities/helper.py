@@ -121,11 +121,12 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     import cv2
     import os
     import numpy as np
-    from utilities.constants import dataset_dir, im_width, im_height, num_joints
+    from utilities.constants import dataset_dir, im_width_small, im_height_small
+    from utilities.constants import im_height, im_width, num_joints
     
     num_images = len(indices)
     
-    conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.float16)
+    conf_map = np.zeros((num_images, im_width_small, im_height_small, num_joints), np.float16)
     
     # For image in all images
     for image_id in indices:
@@ -150,6 +151,7 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
                     numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
                     heatmap_joint = np.exp(numerator/sigma)
                     heatmap_image[:, :, part_num] = np.maximum(heatmap_joint, heatmap_image[:, :, part_num])
+                    heatmap_image[:, :, part_num] = cv2.resize(heatmap_image[:,:, part_num], (im_width_small, im_height_small))
                     
                     
                     conf_map[image_id % num_images, :, :, :] = heatmap_image        
@@ -265,7 +267,7 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
         conf_maps = generate_confidence_maps(all_keypoints, range(batch-1, batch+batch_size-1))
         pafs = generate_paf(all_keypoints, range(batch-1, batch+batch_size-1))
     
-        yield count, images, conf_maps, pafs
+        yield images, conf_maps, pafs
     
     # Handle cases where the total size is not a multiple of batch_size
     
@@ -291,7 +293,7 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
         conf_maps = generate_confidence_maps(all_keypoints, range(start_index, final_index + 1))
         pafs = generate_paf(all_keypoints, range(start_index, final_index + 1))
         
-        yield count + 1, images, conf_maps, pafs
+        yield images, conf_maps, pafs
         
 # -------EVALUATION FUNCTIONS-------------------------
 def find_joints(confidence_maps, threshold = 0.7):
