@@ -102,27 +102,27 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
     cv2.destroyAllWindows()
  
     
-def affine_transform(img, scale):
+def do_affine_transform(img, scale=0.25):
     """
     Takes an image and perform scaling affine transformation on it.
     Inputs: 
         img: the image on which to apply the transform
-        scale: The factor by which to scale. 
+        scale: The factor by which to scale. Default 0.25 as required by model.
     Outputs:
         tranformed image is returned.
     """
     import cv2
     import numpy as np
     
-    print(f'here: {img.shape}')
-    
     transformation_matrix = [[scale, 0, 0], [0, scale, 0]]
     rows, cols = img.shape[0], img.shape[1]
+    
+#    print(f'rows: {rows}, cols: {cols}')
     
     transformation_matrix = np.asarray(transformation_matrix, dtype=np.float32)
     return cv2.warpAffine(np.float32(img), transformation_matrix, (int(cols*scale), int(rows*scale)))
 
-def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
+def generate_confidence_maps(all_keypoints, indices, val=False, affine_transform=True, sigma=7):
     """
     Generate confidence maps for a batch of indices.
     The generated confidence_maps are of shape: 
@@ -132,6 +132,7 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
         dictionary that contains image_id as keys and keypoints for each person.
         indices: a list of indices for which the conf_maps are to be generated.
         val: True if used for validation set, else false
+        affine_transform: A bool to whether apply affine transform or not
         sigma: used to control the spread of the peak.
     Output:
         conf_map: A numpy array of shape: (batch_size, im_width, im_height, num_joints)
@@ -144,7 +145,10 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
     
     num_images = len(indices)
     
-    conf_map = np.zeros((num_images, im_width_small, im_height_small, num_joints), np.float16)
+    if affine_transform:
+        conf_map = np.zeros((num_images, im_width_small, im_height_small, num_joints), np.float16)
+    else:
+        conf_map = np.zeros((num_images, im_width, im_height, num_joints), np.float16)
     
     # For image in all images
     for image_id in indices:
@@ -171,14 +175,17 @@ def generate_confidence_maps(all_keypoints, indices, val=False, sigma=7):
                     heatmap_image[:, :, part_num] = np.maximum(heatmap_joint, heatmap_image[:, :, part_num])
 #                    heatmap_image[:, :, part_num] = affine_transform(heatmap_image[:, :, part_num], 0.25)
 #                    print(f'{heatmap_image.shape}')
-                    
-                    conf_map[image_id % num_images, :, :, :] = affine_transform(heatmap_image, 0.25)       
+                    if affine_transform:
+                        conf_map[image_id % num_images, :, :, :] = do_affine_transform(heatmap_image)       
+                    else:
+                        conf_map[image_id % num_images, :, :, :] = heatmap_image
+                        
     
     return conf_map
 
 
 
-def generate_paf(all_keypoints, indices, sigma=5, val=False):
+def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=True):
     """
     Generate Part Affinity Fields given a batch of keypoints.
     Inputs:
@@ -188,7 +195,7 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
         be generated.
         sigma: The width of a limb in pixels.
         val(Default=False): True if validation set, False otherwise. 
-        
+        affine_transform: A bool to check whether to apply affine_transform or not
     Outputs:
         paf: A parts affinity fields map of shape: 
             (batch_size, im_width, im_height, 2, num_joints)
@@ -197,11 +204,14 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
     import cv2
     import os
     import numpy as np
-    from utilities.constants import dataset_dir, im_width, im_height, num_joints, skeleton_limb_indices
-    
+    from utilities.constants import dataset_dir, im_width, im_height, num_joints
+    from utilities.constants import skeleton_limb_indices, im_height_small, im_width_small
     num_images = len(indices)
     
-    paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
+    if affine_transform:
+        paf = np.zeros((num_images, im_width_small, im_height_small, 2, len(skeleton_limb_indices)), np.float16)
+    else:
+        paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
     
     # For image in all_images
     for image_id in indices:
@@ -245,19 +255,27 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False):
                     mask = (cond_1 & cond_2 & cond_3).astype(np.float32)
                     
                     # put the values
-                    paf[image_id % num_images, :, :, 0, limb] += np.transpose(mask) * vector[0]
-                    paf[image_id % num_images, :, :, 1, limb] += np.transpose(mask) * vector[1]
+                    if affine_transform:
+                        paf[image_id % num_images, :, :, 0, limb] += do_affine_transform(np.transpose(mask) * vector[0])
+                        paf[image_id % num_images, :, :, 1, limb] += do_affine_transform(np.transpose(mask) * vector[1])
+                    else:
+                        paf[image_id % num_images, :, :, 0, limb] += mask * vector[0]
+                        paf[image_id % num_images, :, :, 1, limb] += mask * vector[1]
     return paf
 
 
-def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, val=False):
-    
+def gen_data(all_keypoints, batch_size = 64, val=False, affine_transform=True):
+    """
+    Generate batches of training data. 
+    Inputs:
+        all_keypoints: 
+    """
     # Necessary imports
     import cv2
     import os
     import numpy as np
     
-    from utilities.constants import dataset_dir
+    from utilities.constants import dataset_dir, im_width, im_height
     from utilities.helper import generate_confidence_maps, get_image_name, generate_paf
     
     batch_count = len(all_keypoints.keys()) // batch_size

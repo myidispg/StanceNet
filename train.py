@@ -40,16 +40,16 @@ for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=
     # Convert all to PyTorch Tensors and move to the training device
     images = torch.from_numpy(images).view(2, 3, 224, 224).float().to(device)
     conf_maps = torch.from_numpy(conf_maps).float().to(device).view(2, constants.num_joints, 56, 56)
-    pafs = torch.from_numpy(pafs).float().to(device).view(2, constants.num_limbs, 56, 56)
+    pafs = torch.from_numpy(pafs).float().to(device).view(2, 2, constants.num_limbs, 56, 56)
     outputs = model(images)
     loss_conf_total = 0
     loss_paf_total = 0
     for i in range(1, 4): # There are 3 stages
         # Sums losses for all 3 stages.
         conf_out = outputs[i]['conf']
-        print(conf_out.shape)
+        print(f'conf_out: {conf_out.shape}')
         paf_out = outputs[i]['paf']
-        print(paf_out.shape)
+        print(f'paf_out: {paf_out.shape}')
         loss_conf_total += criterion_conf(conf_out, conf_maps)
         loss_paf_total += criterion_paf(paf_out, pafs)
     loss = loss_conf_total + loss_paf_total
