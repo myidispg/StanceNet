@@ -27,12 +27,14 @@ keypoints_val = pickle.load(pickle_in)
 
 pickle_in.close()
 
-model = OpenPoseModel(constants.num_joints, constants.num_limbs).to(device)
+model = OpenPoseModel(num_joints = constants.num_joints, num_limbs=constants.num_limbs).to(device)
 
 criterion_conf = torch.nn.MSELoss()
 criterion_paf = torch.nn.MSELoss()
 
 optimizer = torch.optim.Adam(model.parameters())
+
+losses = []
 
 count = 1
 for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=True):
@@ -40,26 +42,27 @@ for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=
     # Convert all to PyTorch Tensors and move to the training device
     images = torch.from_numpy(images).view(2, 3, 224, 224).float().to(device)
     conf_maps = torch.from_numpy(conf_maps).float().to(device).view(2, constants.num_joints, 56, 56)
-    pafs = torch.from_numpy(pafs).float().to(device).view(2, 2, constants.num_limbs, 56, 56)
+    pafs = torch.from_numpy(pafs).float().to(device).view(2, constants.num_limbs, 56, 56)
     outputs = model(images)
     loss_conf_total = 0
     loss_paf_total = 0
     for i in range(1, 4): # There are 3 stages
         # Sums losses for all 3 stages.
         conf_out = outputs[i]['conf']
-        print(f'conf_out: {conf_out.shape}')
+#        print(f'conf_out: {conf_out.shape}, conf_maps: {conf_maps.shape}')
         paf_out = outputs[i]['paf']
-        print(f'paf_out: {paf_out.shape}')
+#        print(f'paf_out: {paf_out.shape}, pafs: {pafs.shape}')
         loss_conf_total += criterion_conf(conf_out, conf_maps)
         loss_paf_total += criterion_paf(paf_out, pafs)
     loss = loss_conf_total + loss_paf_total
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-    print(f'count: {count+1}, loss: {loss.item()}')
+    print(f'count: {count}, loss: {loss.item()}')
 #    print(f'images: {type(images)}, conf: {type(conf_maps)}, pafs: {type(pafs)}')
 #    print(f'images: {images.shape}, conf: {conf_maps.shape}, pafs: {pafs.shape}')
 #    print(f'outputs: {type(outputs)}')
-    if count == 9:
+    if count == 100:
         break
     count += 1
+    

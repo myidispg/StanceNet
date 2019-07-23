@@ -209,9 +209,9 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=Tr
     num_images = len(indices)
     
     if affine_transform:
-        paf = np.zeros((num_images, im_width_small, im_height_small, 2, len(skeleton_limb_indices)), np.float16)
+        paf = np.zeros((num_images, im_width_small, im_height_small, len(skeleton_limb_indices)), np.float16)
     else:
-        paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
+        paf = np.zeros((num_images, im_width, im_height, len(skeleton_limb_indices)), np.float16)
     
     # For image in all_images
     for image_id in indices:
@@ -255,12 +255,16 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=Tr
                     mask = (cond_1 & cond_2 & cond_3).astype(np.float32)
                     
                     # put the values
+#                    if affine_transform:
+#                        paf[image_id % num_images, :, :, 0, limb] += do_affine_transform(mask * vector[0])
+#                        paf[image_id % num_images, :, :, 1, limb] += do_affine_transform(mask * vector[1])
+#                    else:
+#                        paf[image_id % num_images, :, :, 0, limb] += mask * vector[0]
+#                        paf[image_id % num_images, :, :, 1, limb] += mask * vector[1]
                     if affine_transform:
-                        paf[image_id % num_images, :, :, 0, limb] += do_affine_transform(np.transpose(mask) * vector[0])
-                        paf[image_id % num_images, :, :, 1, limb] += do_affine_transform(np.transpose(mask) * vector[1])
+                        paf[image_id % num_images, :, :, limb] += do_affine_transform(mask * vector[0]) + do_affine_transform(mask * vector[1])
                     else:
-                        paf[image_id % num_images, :, :, 0, limb] += mask * vector[0]
-                        paf[image_id % num_images, :, :, 1, limb] += mask * vector[1]
+                        paf[image_id % num_images, :, :, limb] += (mask * vector[0]) + (mask * vector[1])
     return paf
 
 

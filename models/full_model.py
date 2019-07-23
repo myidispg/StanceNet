@@ -35,7 +35,7 @@ class ConvolutionalBlock(nn.Module):
 
 class OpenPoseModel(nn.Module):
     
-    def __init__(self, num_limbs, num_parts):
+    def __init__(self, num_limbs, num_joints):
         super(OpenPoseModel, self).__init__()
         
         self.vgg = VGGFeatureExtractor(False)
@@ -51,7 +51,7 @@ class OpenPoseModel(nn.Module):
         self.paf_conv1_stage1 = nn.Conv2d(128, 32, kernel_size=1)
         self.paf_conv2_stage1 = nn.Conv2d(32, num_limbs, kernel_size=1)
         
-        self.paf_block1_stage2 = ConvolutionalBlock(273)
+        self.paf_block1_stage2 = ConvolutionalBlock(271)
         self.paf_block2_stage2 = ConvolutionalBlock(128)
         self.paf_block3_stage2 = ConvolutionalBlock(128)
         self.paf_block4_stage2 = ConvolutionalBlock(128)
@@ -60,7 +60,7 @@ class OpenPoseModel(nn.Module):
         self.paf_conv1_stage2 = nn.Conv2d(128, 32, kernel_size=1)
         self.paf_conv2_stage2 = nn.Conv2d(32, num_limbs, kernel_size=1)
         
-        self.paf_block1_stage3 = ConvolutionalBlock(529)
+        self.paf_block1_stage3 = ConvolutionalBlock(271)
         self.paf_block2_stage3 = ConvolutionalBlock(128)
         self.paf_block3_stage3 = ConvolutionalBlock(128)
         self.paf_block4_stage3 = ConvolutionalBlock(128)
@@ -70,32 +70,32 @@ class OpenPoseModel(nn.Module):
         self.paf_conv2_stage3 = nn.Conv2d(32, num_limbs, kernel_size=1)
         
         # ---------CONFIDENCE MAPS BLOCK--------
-        self.conf_block1_stage1 = ConvolutionalBlock(273)
+        self.conf_block1_stage1 = ConvolutionalBlock(271)
         self.conf_block2_stage1 = ConvolutionalBlock(128)
         self.conf_block3_stage1 = ConvolutionalBlock(128)
         self.conf_block4_stage1 = ConvolutionalBlock(128)
         self.conf_block5_stage1 = ConvolutionalBlock(128)
         
         self.conf_conv1_stage1 = nn.Conv2d(128, 32, kernel_size=1)
-        self.conf_conv2_stage1 = nn.Conv2d(32, num_parts, kernel_size=1)
+        self.conf_conv2_stage1 = nn.Conv2d(32, num_joints, kernel_size=1)
         
-        self.conf_block1_stage2 = ConvolutionalBlock(271)
+        self.conf_block1_stage2 = ConvolutionalBlock(273)
         self.conf_block2_stage2 = ConvolutionalBlock(128)
         self.conf_block3_stage2 = ConvolutionalBlock(128)
         self.conf_block4_stage2 = ConvolutionalBlock(128)
         self.conf_block5_stage2 = ConvolutionalBlock(128)
         
         self.conf_conv1_stage2 = nn.Conv2d(128, 32, kernel_size=1)
-        self.conf_conv2_stage2 = nn.Conv2d(32, num_parts, kernel_size=1)
+        self.conf_conv2_stage2 = nn.Conv2d(32, num_joints, kernel_size=1)
         
-        self.conf_block1_stage3 = ConvolutionalBlock(271)
+        self.conf_block1_stage3 = ConvolutionalBlock(273)
         self.conf_block2_stage3 = ConvolutionalBlock(128)
         self.conf_block3_stage3 = ConvolutionalBlock(128)
         self.conf_block4_stage3 = ConvolutionalBlock(128)
         self.conf_block5_stage3 = ConvolutionalBlock(128)
         
         self.conf_conv1_stage3 = nn.Conv2d(128, 32, kernel_size=1)
-        self.conf_conv2_stage3 = nn.Conv2d(32, num_parts, kernel_size=1)
+        self.conf_conv2_stage3 = nn.Conv2d(32, num_joints, kernel_size=1)
         
     def forward_stage_1_pafs(self, input_data):
         out = F.relu(self.paf_block1_stage1(input_data), inplace = True)
@@ -152,10 +152,10 @@ class OpenPoseModel(nn.Module):
         return self.conf_conv2_stage3(out)
         
     def forward(self, x):
-        print(f'Input shape: {x.shape}')
+#        print(f'Input shape: {x.shape}')
         
         vgg_out = self.vgg(x)
-        print(f'VGG Output shape: {vgg_out.shape}')        
+#        print(f'VGG Output shape: {vgg_out.shape}')        
         
         outputs = {1: {'paf': None, 'conf': None},
                    2: {'paf': None, 'conf': None},
@@ -168,7 +168,7 @@ class OpenPoseModel(nn.Module):
         
         out_stage2_pafs = self.forward_stage_2_pafs(out_stage1_pafs)
         outputs[2]['paf'] = out_stage2_pafs
-        out_stage2_pafs = torch.cat([out_stage1_pafs, vgg_out], 1)
+        out_stage2_pafs = torch.cat([out_stage2_pafs, vgg_out], 1)
         
         out_stage3_pafs = self.forward_stage_3_pafs(out_stage2_pafs)
         outputs[3]['paf'] = out_stage3_pafs
@@ -188,19 +188,19 @@ class OpenPoseModel(nn.Module):
         
         return outputs
 
-#model = OpenPoseModel(17, 15).to(device)
+#model = OpenPoseModel(15, 17).to(torch.device('cuda'))
 #gpu_memory = torch.cuda.memory_allocated()
 #gpu_memory /= 1024*1024
 #print(f'GPU memory used before training: {gpu_memory}MB')
 #for i in range(10):
 #    print(i+1)
-#    outputs = model(torch.from_numpy(np.ones((2, 3, 224, 224))).float().to(device))
-##    print(f"Stage 1 paf: {outputs[1]['paf'].shape}")
-##    print(f"Stage 2 paf: {outputs[2]['paf'].shape}")
-##    print(f"Stage 3 paf: {outputs[3]['paf'].shape}")
-##    print(f"Stage 1 conf: {outputs[1]['conf'].shape}")
-##    print(f"Stage 2 conf: {outputs[2]['conf'].shape}")
-##    print(f"Stage 3 conf: {outputs[3]['conf'].shape}")
+#    outputs = model(torch.from_numpy(np.ones((2, 3, 224, 224))).float().to(torch.device('cuda')))
+#    print(f"Stage 1 paf: {outputs[1]['paf'].shape}")
+#    print(f"Stage 2 paf: {outputs[2]['paf'].shape}")
+#    print(f"Stage 3 paf: {outputs[3]['paf'].shape}")
+#    print(f"Stage 1 conf: {outputs[1]['conf'].shape}")
+#    print(f"Stage 2 conf: {outputs[2]['conf'].shape}")
+#    print(f"Stage 3 conf: {outputs[3]['conf'].shape}")
 #    gpu_memory = torch.cuda.memory_allocated()
 #    gpu_memory /= 1024*1024
 #    print(f'GPU memory used at step {i+1} is: {gpu_memory}')
