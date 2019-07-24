@@ -42,7 +42,7 @@ for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=
     # Convert all to PyTorch Tensors and move to the training device
     images = torch.from_numpy(images).view(2, 3, 224, 224).float().to(device)
     conf_maps = torch.from_numpy(conf_maps).float().to(device).view(2, constants.num_joints, 56, 56)
-    pafs = torch.from_numpy(pafs).float().to(device).view(2, constants.num_limbs, 56, 56)
+    pafs = torch.from_numpy(pafs).float().to(device).view(2, constants.num_limbs, 2, 56, 56)
     outputs = model(images)
     loss_conf_total = 0
     loss_paf_total = 0
@@ -51,6 +51,13 @@ for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=
         conf_out = outputs[i]['conf']
 #        print(f'conf_out: {conf_out.shape}, conf_maps: {conf_maps.shape}')
         paf_out = outputs[i]['paf']
+        paf_out = paf_out.reshape(
+                paf_out.shape[0],
+                paf_out.shape[1] // 2,
+                2,
+                paf_out.shape[2],
+                paf_out.shape[3]
+                )
 #        print(f'paf_out: {paf_out.shape}, pafs: {pafs.shape}')
         loss_conf_total += criterion_conf(conf_out, conf_maps)
         loss_paf_total += criterion_paf(paf_out, pafs)
@@ -63,8 +70,8 @@ for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=
 #    print(f'images: {type(images)}, conf: {type(conf_maps)}, pafs: {type(pafs)}')
 #    print(f'images: {images.shape}, conf: {conf_maps.shape}, pafs: {pafs.shape}')
 #    print(f'outputs: {type(outputs)}')
-    if count == 100:
-        break
+#    if count == 100:
+#        break
     count += 1
     
 import matplotlib.pyplot as plt
@@ -95,14 +102,29 @@ def process_output_conf_map(image, scale_factor=4):
     
     from utilities.helper import do_affine_transform
     
+    print(image.shape)
+    
     conf = np.zeros((image.shape[2], image.shape[3]))
-    image = image.reshape(image.shape[2], image.shape[3], 1)
+    image = image.reshape(image.shape[2], image.shape[3], 17)
     for i in range(17):
         conf += image[:, :, i]
         
     conf = do_affine_transform(image, scale_factor)
     return conf
 
+def visualize_output_conf_map(conf_map):
+    """
+    Visualizes a conf map using OpenCV.
+    Inputs:
+        conf_map: The conf_map to be visualized. Needs to be of the shape:
+            (1, num_joints, width, height)
+    """
+    conf_map = process_output_conf_map(conf_map)
+    cv2.imshow('COnfidence Map',conf_map)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
+visualize_output_conf_map(conf)
 conf = process_output_conf_map(outputs[3]['conf'].cpu().detach().numpy())
 
 disp = np.zeros((56, 56))

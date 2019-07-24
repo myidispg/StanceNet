@@ -49,28 +49,28 @@ class OpenPoseModel(nn.Module):
         self.paf_block5_stage1 = ConvolutionalBlock(128)
         
         self.paf_conv1_stage1 = nn.Conv2d(128, 32, kernel_size=1)
-        self.paf_conv2_stage1 = nn.Conv2d(32, num_limbs, kernel_size=1)
+        self.paf_conv2_stage1 = nn.Conv2d(32, num_limbs*2, kernel_size=1)
         
-        self.paf_block1_stage2 = ConvolutionalBlock(271)
+        self.paf_block1_stage2 = ConvolutionalBlock(286)
         self.paf_block2_stage2 = ConvolutionalBlock(128)
         self.paf_block3_stage2 = ConvolutionalBlock(128)
         self.paf_block4_stage2 = ConvolutionalBlock(128)
         self.paf_block5_stage2 = ConvolutionalBlock(128)
         
         self.paf_conv1_stage2 = nn.Conv2d(128, 32, kernel_size=1)
-        self.paf_conv2_stage2 = nn.Conv2d(32, num_limbs, kernel_size=1)
+        self.paf_conv2_stage2 = nn.Conv2d(32, num_limbs*2, kernel_size=1)
         
-        self.paf_block1_stage3 = ConvolutionalBlock(271)
+        self.paf_block1_stage3 = ConvolutionalBlock(286)
         self.paf_block2_stage3 = ConvolutionalBlock(128)
         self.paf_block3_stage3 = ConvolutionalBlock(128)
         self.paf_block4_stage3 = ConvolutionalBlock(128)
         self.paf_block5_stage3 = ConvolutionalBlock(128)
         
         self.paf_conv1_stage3 = nn.Conv2d(128, 32, kernel_size=1)
-        self.paf_conv2_stage3 = nn.Conv2d(32, num_limbs, kernel_size=1)
+        self.paf_conv2_stage3 = nn.Conv2d(32, num_limbs*2, kernel_size=1)
         
         # ---------CONFIDENCE MAPS BLOCK--------
-        self.conf_block1_stage1 = ConvolutionalBlock(271)
+        self.conf_block1_stage1 = ConvolutionalBlock(286)
         self.conf_block2_stage1 = ConvolutionalBlock(128)
         self.conf_block3_stage1 = ConvolutionalBlock(128)
         self.conf_block4_stage1 = ConvolutionalBlock(128)
