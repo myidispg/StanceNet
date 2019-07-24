@@ -155,7 +155,8 @@ def generate_confidence_maps(all_keypoints, indices, val=False, affine_transform
     # For image in all images
     for image_id in indices:
         
-        heatmap_image = np.zeros((im_width, im_height, num_joints))
+        heatmap_image = np.zeros((im_width, im_height, num_joints), np.float16)
+        mask = np.zeros((im_width, im_height, num_joints), np.float16)
         
         # For a person in the image
         for person in range(len(all_keypoints[image_id])):
@@ -169,21 +170,31 @@ def generate_confidence_maps(all_keypoints, indices, val=False, affine_transform
                 y_index = all_keypoints[image_id][person][part_num][1]
                 visibility = all_keypoints[image_id][person][part_num][2]
                 
+#                print(f'part_num: {part_num}: {x_index}, {y_index}, {visibility}')
+                
                 # Generate heatmap only around the keypoint, leave others as 0
                 if visibility != 0:
                     x_ind, y_ind = np.meshgrid(np.arange(im_width), np.arange(im_height))
                     numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
-                    heatmap_joint = np.exp(numerator/sigma)
+                    heatmap_joint = np.exp(numerator/sigma).transpose()
                     heatmap_image[:, :, part_num] = np.maximum(heatmap_joint, heatmap_image[:, :, part_num])
-#                    heatmap_image[:, :, part_num] = affine_transform(heatmap_image[:, :, part_num], 0.25)
-#                    print(f'{heatmap_image.shape}')
+                    
+                    # Generate mask
+                    mask[x_index, y_index, part_num] = 1
+
                     if affine_transform:
                         conf_map[image_id % num_images, :, :, :] = do_affine_transform(heatmap_image)       
+#                        conf_mask[image_id % num_images, :, :, part_num] = do_affine_transform(mask)
                     else:
                         conf_map[image_id % num_images, :, :, :] = heatmap_image
+#                        conf_mask[image_id % num_images, :, :, part_num] = mask
+        if affine_transform:
+            conf_mask[image_id % num_images] = do_affine_transform(mask)
+        else:
+            conf_mask[image_id % num_images] = mask
                         
     
-    return conf_map
+    return conf_map, conf_mask
 
 
 
@@ -212,8 +223,10 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=Tr
     
     if affine_transform:
         paf = np.zeros((num_images, im_width_small, im_height_small, 2, len(skeleton_limb_indices)), np.float16)
+        paf_mask = paf = np.zeros((num_images, im_width_small, im_height_small, 2, len(skeleton_limb_indices)), np.float16)
     else:
         paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
+        paf_mask = paf = np.zeros((num_images, im_width, im_height, 2, len(skeleton_limb_indices)), np.float16)
     
     # For image in all_images
     for image_id in indices:
@@ -260,14 +273,18 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=Tr
                     if affine_transform:
                         paf[image_id % num_images, :, :, 0, limb] += do_affine_transform(mask * vector[0])
                         paf[image_id % num_images, :, :, 1, limb] += do_affine_transform(mask * vector[1])
+                        paf_mask[image_id % num_images, :, :, 0, limb] = do_affine_transform(mask)
+                        paf_mask[image_id % num_images, :, :, 1, limb] = do_affine_transform(mask)
                     else:
                         paf[image_id % num_images, :, :, 0, limb] += mask * vector[0]
                         paf[image_id % num_images, :, :, 1, limb] += mask * vector[1]
+                        paf_mask[image_id % num_images, :, :, 0, limb] = mask
+                        paf_mask[image_id % num_images, :, :, 1, limb] = mask
 #                    if affine_transform:
 #                        paf[image_id % num_images, :, :, limb] += do_affine_transform(mask * vector[0]) + do_affine_transform(mask * vector[1])
 #                    else:
 #                        paf[image_id % num_images, :, :, limb] += (mask * vector[0]) + (mask * vector[1])
-    return paf
+    return paf, paf_mask
 
 
 def gen_data(all_keypoints, batch_size = 64, val=False, affine_transform=True):

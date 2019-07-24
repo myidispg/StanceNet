@@ -26,7 +26,7 @@ keypoints_val = pickle.load(pickle_in)
 
 pickle_in.close()
 
-def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, val=False):
+def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, val=False, affine_transform=True):
     
     # Necessary imports
     from utilities.constants import dataset_dir
@@ -54,10 +54,10 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
             
             images[image_id % batch] = img
         
-        conf_maps = generate_confidence_maps(all_keypoints, range(batch-1, batch+batch_size-1))
-        pafs = generate_paf(all_keypoints, range(batch-1, batch+batch_size-1))
+        conf_maps, conf_mask = generate_confidence_maps(all_keypoints, range(batch-1, batch+batch_size-1), affine_transform=affine_transform)
+        pafs, pafs_mask = generate_paf(all_keypoints, range(batch-1, batch+batch_size-1), affine_transform=affine_transform)
     
-        yield count, images, conf_maps, pafs
+        yield count, images, conf_maps, conf_mask, pafs, pafs_mask
     
     # Handle cases where the total size is not a multiple of batch_size
     
@@ -80,11 +80,24 @@ def gen_data(all_keypoints, batch_size = 64, im_width = 224, im_height = 224, va
             
             images[image_id % batch_size] = img
             
-        conf_maps = generate_confidence_maps(all_keypoints, range(start_index, final_index + 1))
-        pafs = generate_paf(all_keypoints, range(start_index, final_index + 1))
+        conf_maps, conf_mask = generate_confidence_maps(all_keypoints, range(start_index, final_index + 1), affine_transform=affine_transform)
+        pafs, pafs_mask = generate_paf(all_keypoints, range(start_index, final_index + 1), affine_transform=affine_transform)
         
-        yield count + 1, images, conf_maps, pafs
+        yield count + 1, images, conf_maps, conf_mask, pafs, pafs_mask
         
-for batch, images, conf_maps, pafs in gen_data(keypoints_val, 64, 224, 224, True):
+for batch, images, conf_maps, conf_mask, pafs_mask,  pafs in gen_data(keypoints_val, 8, 224, 224, True):
     print(f'batch: {batch}\timages: {images.shape}\tconf_map: {conf_maps.shape}\tpafs: {pafs.shape}')
     break
+
+total = 0
+for i in range(17):
+    total += np.sum(conf_maps[3, :, :, i])
+    
+import cv2
+single_image = np.zeros((56, 56)) 
+for i in range(17):
+    single_image += conf_mask[1, :, :, i]
+    
+cv2.imshow('single', single_image)
+cv2.waitKey()
+cv2.destroyAllWindows()
