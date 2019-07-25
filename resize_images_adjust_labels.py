@@ -59,11 +59,21 @@ def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
         new_keypoints[img_id] = all_person_keypoints
         img = cv2.resize(img, (im_height, im_width))
         if val:
-            print(os.path.join(dataset_dir, 'new_val2017', img_name))
-            cv2.imwrite(os.path.join(dataset_dir, 'new_val2017', img_name), img)
+            if os.path.exists(os.path.join(dataset_dir, 'new_val2017')):
+                print(os.path.join(dataset_dir, 'new_val2017', img_name))
+                cv2.imwrite(os.path.join(dataset_dir, 'new_val2017', img_name), img)
+            else:
+                os.mkdir(os.path.join(dataset_dir, 'new_val2017'))
+                print(os.path.join(dataset_dir, 'new_val2017', img_name))
+                cv2.imwrite(os.path.join(dataset_dir, 'new_val2017', img_name), img)
         else:
-            print(os.path.join(dataset_dir, 'new_train2017', img_name))
-            cv2.imwrite(os.path.join(dataset_dir, 'new_train2017', img_name), img)
+            if os.path.exists(os.path.join(dataset_dir, 'new_train2017')):
+                print(os.path.join(dataset_dir, 'new_train2017', img_name))
+                cv2.imwrite(os.path.join(dataset_dir, 'new_train2017', img_name), img)
+            else:
+                os.mkdir(os.path.join(dataset_dir, 'new_train2017'))
+                print(os.path.join(dataset_dir, 'new_train2017', img_name))
+                cv2.imwrite(os.path.join(dataset_dir, 'new_train2017', img_name), img)
         
     
     return new_keypoints

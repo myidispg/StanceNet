@@ -39,7 +39,7 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
                                   'new_train2017',
                                   image_name)
     
-#    print(image_path)
+    print(image_path)
     
     img = cv2.imread(image_path, cv2.IMREAD_COLOR)
     
@@ -64,7 +64,10 @@ def draw_skeleton(image_id, all_keypoints, skeleton_limb_indices,
 
                 
     cv2.imshow('image', img)
-    cv2.waitKey(wait_time)
+    if wait_time is None:
+        cv2.waitKey()
+    else:
+        cv2.waitKey(wait_time)
     cv2.destroyAllWindows()
     
 def process_output_conf_map(image, scale_factor=4):
