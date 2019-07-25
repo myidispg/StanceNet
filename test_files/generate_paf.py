@@ -12,7 +12,8 @@ import pickle
 import os
 
 from utilities.constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
-from utilities.helper import get_image_name, draw_skeleton, bressenham_line
+from utilities.helper import get_image_name
+from visualization.visualization_functions import draw_skeleton
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')

@@ -37,7 +37,7 @@ optimizer = torch.optim.Adam(model.parameters())
 losses = []
 
 count = 1
-for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=True):
+for images, conf_maps, pafs in helper.gen_data(keypoints_train, batch_size=2, val=True):
     
     # Convert all to PyTorch Tensors and move to the training device
     images = torch.from_numpy(images).view(2, 3, 224, 224).float().to(device)
@@ -75,7 +75,7 @@ for images, conf_maps, pafs in helper.gen_data(keypoints_val, batch_size=2, val=
     count += 1
     
 import matplotlib.pyplot as plt
-plt.plot(list(range(100)), losses)
+plt.plot(list(range(len(losses))), losses)
 plt.xlabel('Losses')
 plt.ylabel('Epochs')
 

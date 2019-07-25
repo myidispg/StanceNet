@@ -8,8 +8,10 @@ Created on Tue Jul  9 14:41:02 2019
 import os
 import json
 
-from helper import draw_skeleton, group_keypoints, get_image_name, get_image_id_from_filename
+from helper import draw_skeleton, get_image_name, get_image_id_from_filename
 from constants import dataset_dir, skeleton_limb_indices
+from data_process.process_functions import group_keypoints
+
 
 with open(os.path.join(dataset_dir,
                        'annotations', 'person_keypoints_val2017.json'), 'r') as JSON:
@@ -104,9 +106,6 @@ for image in train_images:
         pass
     else:
         print(f'Problem with {image_id}')
-    
-#    draw_skeleton(image_id, keypoints_train[image_id], skeleton_limb_indices, 
-#                  wait_time=1, val=False)
     
 print('There seems to be no issues with the train set and labels.')
 

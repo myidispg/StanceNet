@@ -4,13 +4,17 @@ Created on Wed Jul 10 19:05:53 2019
 
 @author: myidi
 """
+"""
+Resizes all images so that they have a fixed size and adjusts labels accordingly.
+"""
 
 import os
 import pickle
 import cv2
 
 from utilities.constants import dataset_dir, im_width, im_height, skeleton_limb_indices
-from utilities.helper import get_image_name, draw_skeleton
+from utilities.helper import get_image_name
+from visualization.visualization_functions import draw_skeleton
 
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_val.pickle'), 'rb')
 keypoints_val = pickle.load(pickle_in)
@@ -66,8 +70,6 @@ def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
     
 new_keypoints_val = resize_image_keypoint(keypoints_val, im_width, im_height, True)
 new_keypoints_train = resize_image_keypoint(keypoints_train, im_width, im_height)
-
-#draw_skeleton(5, new_keypoints_train[5], skeleton_limb_indices, val=False)
 
 # Save the keypoints to a pickle file
 import pickle 

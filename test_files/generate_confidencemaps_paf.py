@@ -13,7 +13,8 @@ import cv2
 #im = cv2.imread('Coco_Dataset/new_val2017/000000000000.jpg', cv2.IMREAD_COLOR)
 
 from utilities.constants import dataset_dir, num_joints, im_height, im_width, skeleton_limb_indices
-from utilities.helper import get_image_name, draw_skeleton
+from utilities.helper import get_image_name
+from visualization.visualization_functions import draw_skeleton
 
 # Read the pickle files into dictionaries.
 pickle_in = open(os.path.join(dataset_dir, 'keypoints_train_new.pickle'), 'rb')
