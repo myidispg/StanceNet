@@ -7,8 +7,8 @@ Created on Tue Jul  9 14:41:36 2019
 
 import os
 
-im_height = 480
-im_width = 480
+im_height = 368
+im_width = 360
 im_height_small = 56
 im_width_small = 56
 

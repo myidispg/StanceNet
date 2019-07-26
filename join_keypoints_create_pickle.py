@@ -8,7 +8,7 @@ Created on Tue Jul  9 14:41:02 2019
 import os
 import json
 
-rom utilities.helper import get_image_name, get_image_id_from_filename
+from utilities.helper import get_image_name, get_image_id_from_filename
 from utilities.constants import dataset_dir, skeleton_limb_indices
 from data_process.process_functions import group_keypoints
 from visualization.visualization_functions import draw_skeleton
