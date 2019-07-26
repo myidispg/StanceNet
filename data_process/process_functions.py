@@ -107,7 +107,7 @@ def generate_confidence_maps(all_keypoints, indices, val=False, affine_transform
             conf_mask[image_id % num_images] = mask
                         
     
-    return conf_map, conf_mask
+    return conf_map #, conf_mask
 
 def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=True):
     """
@@ -190,4 +190,4 @@ def generate_paf(all_keypoints, indices, sigma=5, val=False, affine_transform=Tr
 #                        paf[image_id % num_images, :, :, limb] += do_affine_transform(mask * vector[0]) + do_affine_transform(mask * vector[1])
 #                    else:
 #                        paf[image_id % num_images, :, :, limb] += (mask * vector[0]) + (mask * vector[1])
-    return paf, paf_mask
+    return paf #, paf_mask

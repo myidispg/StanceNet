@@ -10,11 +10,13 @@ import os
 
 import numpy as np
 
+from models.full_model import OpenPoseModel
+
 import utilities.helper as helper
 import utilities.constants as constants
 
 def train_epoch(model, criterion_conf, criterion_paf, optimizer, 
-                keypoints, batch_size, losses, device, val=False,
+                keypoints, losses, device, batch_size, val=False,
                 print_every=5000):
     """
     This method trains the model for a single epoch.
@@ -24,10 +26,10 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         criterion_paf: The criterion for Parts Affinity Fields
         optimizer: The optimizer instance used for updating the model weights.
         keypoints: The list of keypoints for the images. Used to generate batches.
-        batch_size: The batch size to be used for training.
         losses: A list in which to append the losses. 
             They will be used for plotting purposes.
         device: A torch.device() object. To see if training on cuda(GPU) or CPU.
+        batch_size: The batch size to be used for training.
         val: A bool to see if this is the training or validation set. 
             True if validation set. Default is False
         print_every: After how many batches to print the loss. Default=5000
@@ -43,6 +45,9 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
     running_loss = 0
     # Count the batch_number
     batch_num = 1
+    
+    print('Training for an epoch. This will take some hours depending on ' \
+          'system specs...')
     
     # Use the DataGenerator to generate batches of data and perform training.
     for images, conf_maps, pafs in helper.gen_data(keypoints,
@@ -96,12 +101,81 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         # Print statistics
         if batch_num % print_every == 0:
             print(f'Batch number: {batch_num}\tAverage loss:' \
-                  f'{running_loss/batch_num}')
+                  f'{running_loss/print_every}')
             running_loss = 0
     print('Finished epoch.')
     
     return model, optimizer, losses
         
         
-        
+def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
+          print_every=5000, resume=False):
+    """
+    Train the model. The training can either begin a new or start from the 
+    latest saved state. In case of resuming, the model state dictionary, 
+    optimizer state, losses etc. will be read from the disk. The path to 
+    the dave file can be found in "utilities/constants.py". AFter every epoch, 
+    the model along with optimizer state and losses will be saved to disk.
+    Inputs:
+        keypoints: The training keypoints. They are used to generate batches.
+        device: A torch.device() object. To see if training on cuda(GPU) or CPU.
+        batch_size: The batch size to be used for training.
+        num_epochs: The number of epochs for which to train. Default=5.
+        val: Determine if the validation set is being used or not.
+        print_every: While training, this is used to print loss metric after 
+            batches in an epoch.
+        resume: To see if training is starting or resuming. If resuming, info 
+            is read from the path in "utilities/constants.py".
+    Outputs:
+        Returns 0 if successful. Else None.
+    """      
+    losses = [] # Initialize empty loss.
+    # Losses is a list of lists. Each sub list contains losses for an epochs. 
+    # Hence the number of sub-lists is equal to the number of epochs for which
+    # the model has been trained.
     
+    model = OpenPoseModel(num_joints = constants.num_joints,
+                          num_limbs=constants.num_limbs).to(device) 
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    criterion_conf = torch.nn.MSELoss()
+    criterion_paf = torch.nn.MSELoss()
+    
+    latest_epoch = 1
+    
+    if resume:
+        print('Looking for a trained model.')
+        # Get the latest epoch number from the saved models.
+        contents = os.listdir(constants.model_path)
+        if len(contents) == 0:
+            print('No trained model exists. Please start with val=True')
+            return None
+        for name in contents:
+            epoch = int(name.split('_')[1])
+            latest_epoch = epoch if epoch > latest_epoch else latest_epoch
+        # Construct model path using the latest epoch.
+        model_path = model_path = os.path.join(
+                constants.model_path, f'stancenet_{latest_epoch}_epochs.pth')
+        checkpoint = torch.load(model_path)
+        model.load_state_dict(checkpoint['model_state'])
+        optimizer.load_state_dict(checkpoint['optimizer_state'])
+        losses = checkpoint['losses']
+    
+    # Begin training for the specified number of epochs.
+    print(f'Epoch {latest_epoch}')
+    for epoch in range(latest_epoch, latest_epoch + num_epochs):
+        epoch_losses = []
+        model, optimizer, epoch_losses = train_epoch(model, criterion_conf,
+                                                     criterion_paf, optimizer,
+                                                     keypoints, epoch_losses,
+                                                     device, batch_size=2,
+                                                     val=True, print_every=200)
+        losses.append(epoch_losses)
+        print('Saving model after this epoch now.')
+        # Create a checkpoint and save the latest state.
+        checkpoint = {'epoch': epoch,
+                      'model_state': model.state_dict(),
+                      'optimizer_state': optimizer.state_dict(),
+                      'losses': epoch_losses
+                      }
+    return 0
+        

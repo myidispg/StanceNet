@@ -7,8 +7,8 @@ Created on Tue Jul  9 14:41:36 2019
 
 import os
 
-im_height = 224
-im_width = 224
+im_height = 480
+im_width = 480
 im_height_small = 56
 im_width_small = 56
 
@@ -18,7 +18,8 @@ num_limbs = 15
 # Used in creating confidence maps.
 sigma = 1500
 
-dataset_dir = os.path.join('C:\Machine Learning Projects\OpenPose', 'Coco_Dataset')
+dataset_dir = os.path.join(os.getcwd(), 'Coco_Dataset')
+model_path = os.path.join(os.getcwd(), 'trained_models')
 
 # The joint pairs to create skeletons.
 skeleton_limb_indices = [(3,5), (3,2), (2, 4), (7,6), (7,9), (9,11), (6,8),
