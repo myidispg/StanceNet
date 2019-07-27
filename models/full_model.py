@@ -152,10 +152,10 @@ class OpenPoseModel(nn.Module):
         return self.conf_conv2_stage3(out)
         
     def forward(self, x):
-#        print(f'Input shape: {x.shape}')
+        print(f'Input shape: {x.shape}')
         
         vgg_out = self.vgg(x)
-#        print(f'VGG Output shape: {vgg_out.shape}')        
+        print(f'VGG Output shape: {vgg_out.shape}')        
         
         outputs = {1: {'paf': None, 'conf': None},
                    2: {'paf': None, 'conf': None},
@@ -173,7 +173,7 @@ class OpenPoseModel(nn.Module):
         out_stage3_pafs = self.forward_stage_3_pafs(out_stage2_pafs)
         outputs[3]['paf'] = out_stage3_pafs
         out_stage3_pafs = torch.cat([out_stage3_pafs, vgg_out], 1)
-#        
+      
 #        # CONF BLOCK
         out_stage1_conf = self.forward_stage_1_conf(out_stage3_pafs)
         outputs[1]['conf'] = out_stage1_conf
@@ -188,6 +188,14 @@ class OpenPoseModel(nn.Module):
         
         return outputs
 
+model = OpenPoseModel(15, 17).to(torch.device('cuda'))
+for j in range(10):
+    print(f'Round {j+1}')
+    outputs = model(torch.from_numpy(np.ones((1, 3, 368, 368))).float().to(torch.device('cuda')))
+    for i in range(1, 4):
+        print(f'Stage {i} paf: {outputs[i]["paf"].shape}')
+        print(f'Stage {i} conf: {outputs[i]["conf"].shape}')
+    print()
 #model = OpenPoseModel(15, 17).to(torch.device('cuda'))
 #gpu_memory = torch.cuda.memory_allocated()
 #gpu_memory /= 1024*1024

@@ -24,7 +24,7 @@ keypoints_train = pickle.load(pickle_in)
 
 pickle_in.close()
 
-# Resize the images to 240x240 and maintain the keypoint information.
+# Resize the images to 368x368 and maintain the keypoint information.
 def resize_image_keypoint(all_keypoints, im_width, im_height, val=False):
     
     new_keypoints = dict()

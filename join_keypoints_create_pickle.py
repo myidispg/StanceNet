@@ -55,8 +55,8 @@ for annotation in train_dict['annotations']:
             keypoints_train[annotation['image_id']] = [group_keypoints(
                     annotation['keypoints'])]
 
-draw_skeleton(209468, keypoints_train[209468], skeleton_limb_indices,
-              val=False, wait_time=1)
+#draw_skeleton(69213, keypoints_val[69213], skeleton_limb_indices,
+#              val=True, wait_time=None)
 
 # Now, I am going to remove all the images from the test and validation directory
 # that are not labelled with people in the images.

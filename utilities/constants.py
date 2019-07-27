@@ -8,9 +8,9 @@ Created on Tue Jul  9 14:41:36 2019
 import os
 
 im_height = 368
-im_width = 360
-im_height_small = 56
-im_width_small = 56
+im_width = 368
+im_height_small = 120
+im_width_small = 120
 
 num_joints = 17
 num_limbs = 15

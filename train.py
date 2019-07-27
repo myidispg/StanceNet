@@ -15,7 +15,8 @@ from models.full_model import OpenPoseModel
 
 import utilities.constants as constants
 import utilities.helper as helper
-from train_utils import train_epoch, train
+from training_utilities.train_utils import train_epoch, train
+from training_utilities.stancenet_dataset import StanceNetDataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -27,6 +28,18 @@ pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_val_new.pickle')
 keypoints_val = pickle.load(pickle_in)
 
 pickle_in.close()
+
+train_data = StanceNetDataset(keypoints_train,
+                              os.path.join(constants.dataset_dir, 'new_train2017'))
+train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=2,
+                                               shuffle=True)
+
+for batch_num, images, conf_maps, pafs in enumerate(train_dataloader):
+    print(batch_num)
+    print(images.shape)
+    print(conf_maps.shape)
+    print(pafs.shape)
+    break
 
 train(keypoints_val, device, batch_size=2, num_epochs=1, val=True, 
       print_every=200, resume=False)
