@@ -9,8 +9,8 @@ import os
 
 im_height = 368
 im_width = 368
-im_height_small = 120
-im_width_small = 120
+im_height_small = 92
+im_width_small = 92
 
 num_joints = 17
 num_limbs = 15

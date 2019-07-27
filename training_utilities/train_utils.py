@@ -16,8 +16,7 @@ import utilities.helper as helper
 import utilities.constants as constants
 
 def train_epoch(model, criterion_conf, criterion_paf, optimizer, 
-                keypoints, losses, device, batch_size, val=False,
-                print_every=5000):
+                dataloader, losses, device, print_every=5000):
     """
     This method trains the model for a single epoch.
     Inputs:
@@ -25,13 +24,11 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         criterion_conf: The criterion for confidence maps
         criterion_paf: The criterion for Parts Affinity Fields
         optimizer: The optimizer instance used for updating the model weights.
-        keypoints: The list of keypoints for the images. Used to generate batches.
+        dataloader: The dataloader with the custom Dataset.
         losses: A list in which to append the losses. 
             They will be used for plotting purposes.
         device: A torch.device() object. To see if training on cuda(GPU) or CPU.
         batch_size: The batch size to be used for training.
-        val: A bool to see if this is the training or validation set. 
-            True if validation set. Default is False
         print_every: After how many batches to print the loss. Default=5000
     Outputs:
         model: The model trained for one epoch.
@@ -43,24 +40,18 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
     
     # A variable to accumulate losses until print_every is triggered.
     running_loss = 0
-    # Count the batch_number
-    batch_num = 1
     
     print('Training for an epoch. This will take some hours depending on ' \
           'system specs...')
     
     # Use the DataGenerator to generate batches of data and perform training.
-    for images, conf_maps, pafs in helper.gen_data(keypoints,
-                                                   batch_size=batch_size,
-                                                   val=val):
+    for batch_num, (images, conf_maps, pafs) in enumerate(dataloader):
         # Convert all to PyTorch Tensors and move to the training device
-        images = torch.from_numpy(images).view(2, 3, 224, 224).float().to(device)
-        conf_maps = torch.from_numpy(conf_maps).float().to(device).view(2,
-                                    constants.num_joints,
-                                    56, 56)
-        pafs = torch.from_numpy(pafs).float().to(device).view(2,
-                               constants.num_limbs,
-                               2, 56, 56)
+        images = images.view(2, 3, constants.im_width, constants.im_width).float().to(device)
+        conf_maps = conf_maps.float().to(device).view(2, constants.num_joints,
+                                    constants.im_width_small, constants.im_width_small)
+        pafs = pafs.float().to(device).view(2, constants.num_limbs, 2,
+                         constants.im_width_small, constants.im_width_small)
         
         # Perform a forward pass through the model
         outputs = model(images)
@@ -108,8 +99,8 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
     return model, optimizer, losses
         
         
-def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
-          print_every=5000, resume=False):
+def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
+          resume=False):
     """
     Train the model. The training can either begin a new or start from the 
     latest saved state. In case of resuming, the model state dictionary, 
@@ -117,9 +108,8 @@ def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
     the dave file can be found in "utilities/constants.py". AFter every epoch, 
     the model along with optimizer state and losses will be saved to disk.
     Inputs:
-        keypoints: The training keypoints. They are used to generate batches.
+        dataloader: The dataloader that provided data from the custom dataset.
         device: A torch.device() object. To see if training on cuda(GPU) or CPU.
-        batch_size: The batch size to be used for training.
         num_epochs: The number of epochs for which to train. Default=5.
         val: Determine if the validation set is being used or not.
         print_every: While training, this is used to print loss metric after 
@@ -136,7 +126,7 @@ def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
     
     model = OpenPoseModel(num_joints = constants.num_joints,
                           num_limbs=constants.num_limbs).to(device) 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     criterion_conf = torch.nn.MSELoss()
     criterion_paf = torch.nn.MSELoss()
     
@@ -153,7 +143,7 @@ def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
             epoch = int(name.split('_')[1])
             latest_epoch = epoch if epoch > latest_epoch else latest_epoch
         # Construct model path using the latest epoch.
-        model_path = model_path = os.path.join(
+        model_path = os.path.join(
                 constants.model_path, f'stancenet_{latest_epoch}_epochs.pth')
         checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint['model_state'])
@@ -166,9 +156,9 @@ def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
         epoch_losses = []
         model, optimizer, epoch_losses = train_epoch(model, criterion_conf,
                                                      criterion_paf, optimizer,
-                                                     keypoints, epoch_losses,
-                                                     device, batch_size=2,
-                                                     val=True, print_every=200)
+                                                     dataloader, epoch_losses,
+                                                     device,
+                                                     print_every=print_every)
         losses.append(epoch_losses)
         print('Saving model after this epoch now.')
         # Create a checkpoint and save the latest state.
@@ -177,5 +167,7 @@ def train(keypoints, device, batch_size=2, num_epochs=5, val=False,
                       'optimizer_state': optimizer.state_dict(),
                       'losses': epoch_losses
                       }
+        model_path =  os.path.join(
+                constants.model_path, f'stancenet_{epoch}_epochs.pth')
+        torch.save(checkpoint, )
     return 0
-        

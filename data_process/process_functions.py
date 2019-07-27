@@ -23,7 +23,7 @@ def group_keypoints(keypoints):
     
     return arranged_keypoints
 
-def do_affine_transform(img, scale=0.1166666):
+def do_affine_transform(img, scale=0.25):
     """
     Takes an image and perform scaling affine transformation on it.
     Inputs: 
@@ -56,9 +56,9 @@ def generate_confidence_maps(all_keypoints, img_id, affine_transform=True, sigma
     """
     
     if affine_transform:
-        conf_map = np.zeros((im_width_small, im_height_small, num_joints), np.float16)
+        conf_map = np.zeros((im_width_small, im_height_small, num_joints), np.float32)
     else:
-        conf_map = np.zeros((im_width, im_height, num_joints), np.float16)
+        conf_map = np.zeros((im_width, im_height, num_joints), np.float32)
     
     # For a person in the image
     for person in range(len(all_keypoints[img_id])):
@@ -79,10 +79,9 @@ def generate_confidence_maps(all_keypoints, img_id, affine_transform=True, sigma
                 if affine_transform:
                     heatmap_joint = do_affine_transform(heatmap_joint)
 #                print(conf_map.shape)
-                conf_map[:, :, part_num] = np.maximum(heatmap_joint, 
-                                            conf_map[:, :, part_num])
-                if affine_transform:
-                    conf_map = do_affine_transform(conf_map)  
+                conf_map[:, :, part_num] = np.maximum(heatmap_joint, conf_map[:, :, part_num])
+#                if affine_transform:
+#                    conf_map = do_affine_transform(conf_map)  
     return conf_map
     
 
@@ -103,10 +102,10 @@ def generate_paf(all_keypoints, img_id, sigma=5, affine_transform=True):
     
     if affine_transform:
         paf = np.zeros((im_width_small, im_height_small, 2,
-                        len(skeleton_limb_indices)), np.float16)
+                        len(skeleton_limb_indices)), np.float32)
     else:
         paf = np.zeros((im_width, im_height, 2, len(skeleton_limb_indices)),
-                       np.float16)
+                       np.float32)
     
     # For each person in the image
     for person in range(len(all_keypoints[img_id])):
@@ -146,11 +145,12 @@ def generate_paf(all_keypoints, img_id, sigma=5, affine_transform=True):
                 
                 # put the values
                 if affine_transform:
-                    paf[:, : 0, limb] += do_affine_transform(mask * vector[0])
-                    paf[:, : 1, limb] += do_affine_transform(mask * vector[1])
+                    mask = do_affine_transform(mask)
+                    paf[:, :, 0, limb] += mask * vector[0]
+                    paf[:, :, 1, limb] += mask * vector[1]
                 else:
-                    paf[:, : 0, limb] += mask * vector[0]
-                    paf[:, : 1, limb] += mask * vector[1]
+                    paf[:, :, 0, limb] += mask * vector[0]
+                    paf[:, :, 1, limb] += mask * vector[1]
     return paf
                 
                 

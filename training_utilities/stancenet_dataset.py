@@ -39,7 +39,7 @@ class StanceNetDataset(Dataset):
         confidence maps and the parts affinity fields.
         """
         img_name = os.path.join(self.img_dir, get_image_name(idx))
-        print(img_name)
+#        print(img_name)
         img = cv2.imread(img_name)
         
         conf_maps = generate_confidence_maps(self.keypoints, idx)

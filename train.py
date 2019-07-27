@@ -31,19 +31,18 @@ pickle_in.close()
 
 train_data = StanceNetDataset(keypoints_train,
                               os.path.join(constants.dataset_dir, 'new_train2017'))
+valid_data = StanceNetDataset(keypoints_val,
+                              os.path.join(constants.dataset_dir, 'new_val2017'))
+
 train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=2,
                                                shuffle=True)
+valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=2,
+                                               shuffle=True)
 
-for batch_num, images, conf_maps, pafs in enumerate(train_dataloader):
-    print(batch_num)
-    print(images.shape)
-    print(conf_maps.shape)
-    print(pafs.shape)
-    break
-
-train(keypoints_val, device, batch_size=2, num_epochs=1, val=True, 
-      print_every=200, resume=False)
-
+status = train(valid_dataloader, device, num_epochs=1, val_every=False,
+               print_every=100, resume=False)
+if status == None:
+    print('There was some issue in the traiing process. Please check.')
     
 import matplotlib.pyplot as plt
 plt.plot(list(range(len(losses))), losses)
