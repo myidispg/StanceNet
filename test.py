@@ -48,3 +48,13 @@ for idx in segment_val.keys():
     for person in segment_val[idx]:
         print(person)
     break
+
+
+from pycocotools.coco import COCO
+
+segment = val_dict['annotations'][0]['segmentation']
+coco = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+                       'annotations', 'person_keypoints_val2017.json'))
+img_ids = coco.getAnnIds()
+ann = coco.loadAnns(img_ids[0])
+mask = coco.annToMask(ann)
