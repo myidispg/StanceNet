@@ -169,5 +169,5 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
                       }
         model_path =  os.path.join(
                 constants.model_path, f'stancenet_{epoch}_epochs.pth')
-        torch.save(checkpoint, )
+        torch.save(checkpoint, model_path)
     return 0
