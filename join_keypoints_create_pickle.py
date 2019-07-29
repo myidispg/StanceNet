@@ -110,41 +110,52 @@ for image in train_images:
     
 print('There seems to be no issues with the train set and labels.')
 
-# Finally, change image names so that the image ids start with 0.
-new_keypoints_val = dict()
-ids_val_list = list(keypoints_val.keys())
-ids_val_list.sort()
-
-count = 0
-for img_id in ids_val_list:
-    new_keypoints_val[count] = keypoints_val[img_id]
-    os.rename(os.path.join(dataset_dir, 'val2017', get_image_name(img_id)),
-              os.path.join(dataset_dir, 'val2017', get_image_name(count)))
-    count += 1
-    
-print(f'Renamed {count} files.')
-
-new_keypoints_train = dict()
-ids_train_list = list(keypoints_train.keys())
-ids_train_list.sort()
-
-count = 0
-for img_id in ids_train_list:
-    new_keypoints_train[count] = keypoints_train[img_id]
-    os.rename(os.path.join(dataset_dir, 'train2017', get_image_name(img_id)),
-              os.path.join(dataset_dir, 'train2017', get_image_name(count)))
-    count += 1
-    
-print(f'Renamed {count} train files.')
-    
-del image, annotation, count, dataset_dir, ids_train_list, ids_val_list, image_id, img_id, keypoints_train, keypoints_val, list_, skeleton_limb_indices, train_dict, train_images, val_dict, val_images
+## Finally, change image names so that the image ids start with 0.
+#new_keypoints_val = dict()
+#ids_val_list = list(keypoints_val.keys())
+#ids_val_list.sort()
+#
+#count = 0
+#for img_id in ids_val_list:
+#    new_keypoints_val[count] = keypoints_val[img_id]
+#    os.rename(os.path.join(dataset_dir, 'val2017', get_image_name(img_id)),
+#              os.path.join(dataset_dir, 'val2017', get_image_name(count)))
+#    count += 1
+#    
+#print(f'Renamed {count} files.')
+#
+#new_keypoints_train = dict()
+#ids_train_list = list(keypoints_train.keys())
+#ids_train_list.sort()
+#
+#count = 0
+#for img_id in ids_train_list:
+#    new_keypoints_train[count] = keypoints_train[img_id]
+#    os.rename(os.path.join(dataset_dir, 'train2017', get_image_name(img_id)),
+#              os.path.join(dataset_dir, 'train2017', get_image_name(count)))
+#    count += 1
+#    
+#print(f'Renamed {count} train files.')
+#    
+#del image, annotation, count, dataset_dir, ids_train_list, ids_val_list, image_id, img_id, keypoints_train, keypoints_val, list_, skeleton_limb_indices, train_dict, train_images, val_dict, val_images
 
 # Save the keypoints to a pickle file
 import pickle 
 pickle_out = open('Coco_Dataset/keypoints_train.pickle', 'wb')
-pickle.dump(new_keypoints_train, pickle_out)
+pickle.dump(keypoints_train, pickle_out)
 pickle_out.close()
 
 pickle_out = open('Coco_Dataset/keypoints_val.pickle', 'wb')
-pickle.dump(new_keypoints_val, pickle_out)
+pickle.dump(keypoints_val, pickle_out)
 pickle_out.close()
+
+
+## Save the keypoints to a pickle file
+#import pickle 
+#pickle_out = open('Coco_Dataset/keypoints_train.pickle', 'wb')
+#pickle.dump(new_keypoints_train, pickle_out)
+#pickle_out.close()
+#
+#pickle_out = open('Coco_Dataset/keypoints_val.pickle', 'wb')
+#pickle.dump(new_keypoints_val, pickle_out)
+#pickle_out.close()

@@ -12,6 +12,8 @@ im_width = 368
 im_height_small = 92
 im_width_small = 92
 
+transform_scale = 4
+
 num_joints = 17
 num_limbs = 15
 

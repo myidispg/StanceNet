@@ -6,55 +6,44 @@ Created on Sat Jul 27 18:37:10 2019
 """
 
 import numpy as np
-import random
-
-def generate_random_array():
-    array = np.zeros((2, 92, 92, 17))
-    for w in range(array.shape[0]):
-        for x in range(array.shape[1]):
-            for y in range(array.shape[2]):
-                for z in range(array.shape[3]):
-                    array[w, x, y, z] = random.random()
-    return array
-
-d1 = np.random.rand(2, 92, 92, 17)
-d2 = np.random.rand(2, 92, 92, 17)
-
-d1 = generate_random_array()
-d2 = generate_random_array()
-
-dist = np.sqrt(np.sum((d2 -  d1)**2))
-test = np.abs(1/(1 - np.exp(-dist))-1) * 100
-
-
-#--------Create mask------
-import json
-import os
-
-with open(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
-                       'annotations', 'person_keypoints_val2017.json'), 'r') as JSON:
-    val_dict = json.load(JSON)
-with open(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
-                       'annotations', 'person_keypoints_train2017.json'), 'r') as JSON:
-    train_dict = json.load(JSON)
-    
-segment_val = dict()
-
-for annotation in val_dict['annotations']:
-    print(annotation)
-    segment_val[annotation['image_id']] = annotation['segmentation']
-
-for idx in segment_val.keys():
-    for person in segment_val[idx]:
-        print(person)
-    break
-
-
 from pycocotools.coco import COCO
+import os
+from data_process.process_functions import generate_confidence_maps, generate_paf
 
-segment = val_dict['annotations'][0]['segmentation']
+import cv2
+
+img = cv2.imread(os.path.join(os.getcwd(), 'Coco_Dataset', 'val2017', '000000000785.jpg')).transpose(1, 0, 2)
+
 coco = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
                        'annotations', 'person_keypoints_val2017.json'))
-img_ids = coco.getAnnIds()
-ann = coco.loadAnns(img_ids[0])
-mask = coco.annToMask(ann)
+# Get category id for person
+person_ids = coco.getCatIds(catNms=['person'])
+# Get img_id for all images with people.
+person_indices = sorted(coco.getImgIds(catIds=person_ids))
+#annids = coco.getAnnIds()
+# get ann_indices of all annotations for the image
+annids = sorted(coco.getAnnIds(person_indices[1]))
+# Load all the annotations for a person
+anns = coco.loadAnns(annids)
+mask = np.zeros(img.shape[:2], np.uint8)
+keypoints = []
+for ann in anns:
+    if ann['num_keypoints'] != 0:
+        keypoints.append(ann['keypoints'])
+#    print(coco.annToMask(ann).transpose().shape())
+    mask = mask | coco.annToMask(ann).transpose()
+shape = img.shape
+conf_map = generate_confidence_maps(keypoints, shape)
+paf = generate_paf(keypoints, shape)
+
+map_ = np.zeros((conf_map.shape[:2]))
+for i in range(15):
+    map_ += paf[:, :, 0, i] + paf[:, :, 1, i]
+    
+cv2.imshow('mask', map_*255)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+test = list(range(51))
+for i in range(0, len(test), 3):
+    print(i)

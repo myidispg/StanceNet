@@ -8,7 +8,7 @@ Created on Thu Jul 25 09:42:17 2019
 import cv2
 import numpy as np
 
-from utilities.constants import dataset_dir, im_width_small, im_height_small
+from utilities.constants import dataset_dir, im_width_small, im_height_small, transform_scale
 from utilities.constants import im_height, im_width, num_joints, skeleton_limb_indices
 
 def group_keypoints(keypoints):
@@ -40,58 +40,55 @@ def do_affine_transform(img, scale=0.25):
     transformation_matrix = np.asarray(transformation_matrix, dtype=np.float32)
     return cv2.warpAffine(np.float32(img), transformation_matrix, (int(cols*scale), int(rows*scale)))
 
-def generate_confidence_maps(all_keypoints, img_id, affine_transform=True, sigma=7):
+def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=7):
     """
     Generate confidence maps for a batch of indices.
     The generated confidence_maps are of shape: 
         (batch_size, im_width, im_height, num_joints)
     Input:
-        all_keypoints: Keypoints for all the images in the dataset. It is a 
-        dictionary that contains image_id as keys and keypoints for each person.
-        img_id: The img id for which the data is accessed.
+        keypoints: The list of keypoints labeled in the image. If multiple people,
+            there can be sub-lists too.
+        img_shape: The shape of the image. Used to create confidence map array.
         affine_transform: A bool to whether apply affine transform or not
         sigma: used to control the spread of the peak.
     Output:
         conf_map: A numpy array of shape: (batch_size, im_width, im_height, num_joints)
     """
-    
     if affine_transform:
-        conf_map = np.zeros((im_width_small, im_height_small, num_joints), np.float32)
+        conf_map = np.zeros((img_shape[0] // 4,
+                             img_shape[1] // 4, num_joints), np.float32)
     else:
-        conf_map = np.zeros((im_width, im_height, num_joints), np.float32)
+        conf_map = np.zeros((img_shape[0], img_shape[1], num_joints), np.float32)
     
-    # For a person in the image
-    for person in range(len(all_keypoints[img_id])):
-        # For all keypoints of the person
-        for part_num in range(len(all_keypoints[img_id][person])):
-            # For keypoint in all_keypoints[image_id][person]:
-            # Get the pixel values at a given keypoint across all 3 channels.
-            # Note that our labels have images (im_width, im_height),
-            # OpenCV has (im_height, im_width)
-            x_index = all_keypoints[img_id][person][part_num][0]
-            y_index = all_keypoints[img_id][person][part_num][1]
-            visibility = all_keypoints[img_id][person][part_num][2]
+    # For sub list in keypoints:
+    for list_ in keypoints:
+        part_num = 0
+        for i in range(0, len(list_), 3):
+            x_index = list_[i]
+            y_index = list_[i+1]
+            visibility = list_[i+2]
             
             if visibility != 0:
-                x_ind, y_ind = np.meshgrid(np.arange(im_width), np.arange(im_height))
+                x_ind, y_ind = np.meshgrid(np.arange(img_shape[0]), 
+                                          np.arange(img_shape[1]))
                 numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
                 heatmap_joint = np.exp(numerator/sigma).transpose()
                 if affine_transform:
                     heatmap_joint = do_affine_transform(heatmap_joint)
-#                print(conf_map.shape)
                 conf_map[:, :, part_num] = np.maximum(heatmap_joint, conf_map[:, :, part_num])
-#                if affine_transform:
-#                    conf_map = do_affine_transform(conf_map)  
+            
+            part_num += 1
+                    
     return conf_map
     
 
-def generate_paf(all_keypoints, img_id, sigma=5, affine_transform=True):
+def generate_paf(keypoints, img_shape, sigma=5, affine_transform=True):
     """
     Generate Part Affinity Fields given a batch of keypoints.
     Inputs:
-        all_keypoints: Keypoints for all the images in the dataset. It is a 
-        dictionary that contains image_id as keys and keypoints for each person.
-        img_id: The image id for which the data is accessed.
+         keypoints: The list of keypoints labeled in the image. If multiple people,
+            there can be sub-lists too.
+        img_shape: The shape of the image. Used to create confidence map array.
         sigma: The width of a limb in pixels.
         affine_transform: A bool to check whether to apply affine_transform or not
     Outputs:
@@ -99,41 +96,38 @@ def generate_paf(all_keypoints, img_id, sigma=5, affine_transform=True):
             (batch_size, im_width, im_height, 2, num_joints)
     """
     
-    
     if affine_transform:
-        paf = np.zeros((im_width_small, im_height_small, 2,
+        paf = np.zeros((img_shape[0] // 4, img_shape[1] // 4, 2,
                         len(skeleton_limb_indices)), np.float32)
     else:
-        paf = np.zeros((im_width, im_height, 2, len(skeleton_limb_indices)),
-                       np.float32)
+        paf = np.zeros((img_shape[0], img_shape[1], 2,
+                        len(skeleton_limb_indices), np.float32))
     
-    # For each person in the image
-    for person in range(len(all_keypoints[img_id])):
-        # For each limb in the skeleton
+    # For sub list in keypoints
+    for list_ in keypoints:
         for limb in range(len(skeleton_limb_indices)):
-            
             limb_indices = skeleton_limb_indices[limb]
             
-            joint_one_index = limb_indices[0] - 1
-            joint_two_index = limb_indices[1] - 1
+            # Convert part num given in skeleton_limb_indices to index in keypoints
+            joint_one_index = (limb_indices[0]-1) * 3
+            joint_two_index = (limb_indices[1]-1) * 3
+            
             
             # If there is 0 for visibility, skip the limb
-            if all_keypoints[img_id][person][joint_one_index][2] != 0 and all_keypoints[img_id][person][joint_two_index][2] != 0:
-                joint_one_loc = np.asarray(all_keypoints[img_id][person][joint_one_index][:2])
-                joint_two_loc = np.asarray(all_keypoints[img_id][person][joint_two_index][:2])
+            if list_[joint_one_index + 2] != 0 and list_[joint_two_index + 2] != 0:
+                joint_one_loc = np.asarray((list_[joint_one_index], list_[joint_one_index+1]))
+                joint_two_loc = np.asarray((list_[joint_two_index], list_[joint_two_index+1]))
                 
                 part_line_segment = joint_two_loc - joint_one_loc
                 norm = np.linalg.norm(part_line_segment)
-
+                
                 norm = norm + 1e-8 if norm == 0 else norm # To make sure it is not equal to zero.
-
-                vector = (part_line_segment)/norm
-
+                
+                vector = part_line_segment / norm
                 # https://gamedev.stackexchange.com/questions/70075/how-can-i-find-the-perpendicular-to-a-2d-vector
                 perpendicular_vec = [-vector[1], vector[0]]
-                
-                x, y = np.meshgrid(np.arange(im_width), np.arange(im_height))
-                # Formula according to the paper
+                x, y = np.meshgrid(np.arange(img_shape[0]), np.arange(img_shape[1]))
+                 # Formula according to the paper
                 along_limb = vector[0] * (x-joint_one_loc[0]) + vector[1] * (y-joint_one_loc[1])
                 across_limb = np.abs(perpendicular_vec[0] * (x-joint_one_loc[0]) + perpendicular_vec[1] * (y - joint_one_loc[1])) 
                 
@@ -141,7 +135,8 @@ def generate_paf(all_keypoints, img_id, sigma=5, affine_transform=True):
                 cond_1 = along_limb >= 0
                 cond_2 = along_limb <= norm
                 cond_3 = across_limb <= sigma
-                mask = (cond_1 & cond_2 & cond_3).astype(np.float32)
+                mask = (cond_1 & cond_2 & cond_3).astype(np.float32).transpose()
+                
                 
                 # put the values
                 if affine_transform:
@@ -152,5 +147,6 @@ def generate_paf(all_keypoints, img_id, sigma=5, affine_transform=True):
                     paf[:, :, 0, limb] += mask * vector[0]
                     paf[:, :, 1, limb] += mask * vector[1]
     return paf
+                
                 
                 

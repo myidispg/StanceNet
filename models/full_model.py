@@ -187,8 +187,9 @@ class OpenPoseModel(nn.Module):
         outputs[3]['conf'] = out_stage3_conf
         
         return outputs
-
+#
 #model = OpenPoseModel(15, 17).to(torch.device('cuda'))
+#outputs = model(torch.from_numpy(np.ones((1, 3, 640, 425))).float().to(torch.device('cuda')))
 #for j in range(10):
 #    print(f'Round {j+1}')
 #    outputs = model(torch.from_numpy(np.ones((1, 3, 368, 368))).float().to(torch.device('cuda')))

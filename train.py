@@ -5,11 +5,12 @@ Created on Sun Jul 21 18:33:28 2019
 @author: myidispg
 """
 
-import pickle
 import os
 import torch
 
 import numpy as np
+
+from pycocotools.coco import COCO
 
 from models.full_model import OpenPoseModel
 
@@ -20,18 +21,32 @@ from training_utilities.stancenet_dataset import StanceNetDataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+
 # Read the pickle files into dictionaries.
-pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_train_new.pickle'), 'rb')
-keypoints_train = pickle.load(pickle_in)
+#pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_train_new.pickle'), 'rb')
+#keypoints_train = pickle.load(pickle_in)
+#
+#pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_val_new.pickle'), 'rb')
+#keypoints_val = pickle.load(pickle_in)
+#
+#pickle_in.close()
 
-pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_val_new.pickle'), 'rb')
-keypoints_val = pickle.load(pickle_in)
+print('Loading training COCO Annotations used for mask generation. Might take time.')
+coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+                       'annotations', 'person_keypoints_train2017.json'))
 
-pickle_in.close()
+ann_ids = coco_train.getAnnIds()
+anns = coco_train.loadAnns(ann_ids)
+print('Annotation load complete.')
 
-train_data = StanceNetDataset(keypoints_train,
-                              os.path.join(constants.dataset_dir, 'new_train2017'))
-valid_data = StanceNetDataset(keypoints_val,
+for ann in anns:
+    mask = coco_train.annToMask(ann)
+    
+test = coco_train.loadAnns(ann_ids[0])
+mask = coco_train.annToMask(test)
+
+train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir, 'new_train2017'))
+valid_data = StanceNetDataset(coco_train, anns, keypoints_val,
                               os.path.join(constants.dataset_dir, 'new_val2017'))
 
 train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=2,
