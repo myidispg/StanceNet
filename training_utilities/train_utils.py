@@ -45,13 +45,18 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
           'system specs...')
     
     # Use the DataGenerator to generate batches of data and perform training.
-    for batch_num, (images, conf_maps, pafs) in enumerate(dataloader):
+    for batch_num, (images, conf_maps, pafs, mask) in enumerate(dataloader):
         # Convert all to PyTorch Tensors and move to the training device
-        images = images.view(2, 3, constants.im_width, constants.im_width).float().to(device)
-        conf_maps = conf_maps.float().to(device).view(2, constants.num_joints,
-                                    constants.im_width_small, constants.im_width_small)
-        pafs = pafs.float().to(device).view(2, constants.num_limbs, 2,
-                         constants.im_width_small, constants.im_width_small)
+        images = images.permute(0, 3, 1, 2).float().to(device)
+        conf_maps = conf_maps.float().to(device).permute(0, 3, 1, 2)
+#        view(2, constants.num_joints,
+#                                    constants.im_width_small, constants.im_width_small)
+        
+#        print(pafs.shape)
+        pafs = pafs.float().to(device).permute(0, 4, 3, 1, 2)
+#        view(2, constants.num_limbs, 2,
+#                         constants.im_width_small, constants.im_width_small)
+        mask = mask.to(device)
         
         # Perform a forward pass through the model
         outputs = model(images)
@@ -63,7 +68,7 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         # sum of losses of all stages.
         loss_conf_total = 0
         loss_paf_total = 0
-        for i in range(1, 4): # Three stages: 1, 2 and 3
+        for i in range(1, 3): # Three stages: 1, 2 and 3
             conf_out = outputs[i]['conf']
             paf_out = outputs[i]['paf']
             paf_out = paf_out.reshape(
@@ -72,8 +77,8 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
                     2,
                     paf_out.shape[2],
                     paf_out.shape[3])
-            loss_conf_total += criterion_conf(conf_out, conf_maps)
-            loss_paf_total += criterion_paf(paf_out, pafs)
+            loss_conf_total += criterion_conf(mask * conf_out, mask * conf_maps)
+            loss_paf_total += criterion_paf(mask * paf_out, mask * pafs)
         # Calculate the total loss for both the outputs: PAF and Conf map.
         loss = loss_conf_total + loss_paf_total
         # Set grads to zero to prevent accumulation.

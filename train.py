@@ -21,44 +21,91 @@ from training_utilities.stancenet_dataset import StanceNetDataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
-# Read the pickle files into dictionaries.
-#pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_train_new.pickle'), 'rb')
-#keypoints_train = pickle.load(pickle_in)
-#
-#pickle_in = open(os.path.join(constants.dataset_dir, 'keypoints_val_new.pickle'), 'rb')
-#keypoints_val = pickle.load(pickle_in)
-#
-#pickle_in.close()
-
 print('Loading training COCO Annotations used for mask generation. Might take time.')
-coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
-                       'annotations', 'person_keypoints_train2017.json'))
+#coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+#                       'annotations', 'person_keypoints_train2017.json'))
+coco_valid = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+                       'annotations', 'person_keypoints_val2017.json'))
 
-ann_ids = coco_train.getAnnIds()
-anns = coco_train.loadAnns(ann_ids)
+#ann_ids = coco_train.getAnnIds()
+#anns = coco_train.loadAnns(ann_ids)
 print('Annotation load complete.')
 
-for ann in anns:
-    mask = coco_train.annToMask(ann)
-    
-test = coco_train.loadAnns(ann_ids[0])
-mask = coco_train.annToMask(test)
+#Collate function to manage variable input sizes
+def collate_fn(batch):
+    # There is a list of batches.
+    # Then each batch is a tuple.
+    output = []
+    for data in batch:
+        batch_data = list()
+        for item in data:
+            print(type(torch.from_numpy(item)))
+            batch_data.append(item)
+        output.append(tuple(batch_data))
+    return output
+        
+#train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir, 'train2017'))
+valid_data = StanceNetDataset(coco_valid, 
+                              os.path.join(constants.dataset_dir, 'val2017'))
 
-train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir, 'new_train2017'))
-valid_data = StanceNetDataset(coco_train, anns, keypoints_val,
-                              os.path.join(constants.dataset_dir, 'new_val2017'))
+#train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=2,
+#                                               shuffle=True, collate_fn=collate_fn)
+valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=1,
+                                               shuffle=True)
 
-train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=2,
-                                               shuffle=True)
-valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=2,
-                                               shuffle=True)
+for img, conf, paf, mask in valid_dataloader:
+    break
+
+conf = conf.numpy()
+paf = paf.numpy()
+mask = mask.numpy().astype(np.uint8)
 
 status = train(valid_dataloader, device, num_epochs=1, val_every=False,
                print_every=100, resume=False)
 if status == None:
     print('There was some issue in the traiing process. Please check.')
-    
+
+
+for batch, (img, conf_map, paf, mask) in enumerate(valid_dataloader):
+#    print(type(data[0][0]))
+    break
+
+import cv2
+
+cv2.imshow('image', img)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+# Visualize predicted conf_map in grayscale.
+def process_conf_map(conf_map):
+    processed_map = np.zeros((conf_map.shape[1], conf_map.shape[2]))
+    for i in range(17):
+        processed_map += conf_map[0, :, :, i]
+    return processed_map
+
+processed_map = process_conf_map(conf)
+
+cv2.imshow('Confidence map', processed_map*255)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+# Visualize predicted paf in grayscale
+def process_paf(paf):
+    processed = np.zeros((paf.shape[1:3]))
+    for i in range(15):
+        processed += paf[0, :, :, 0, i] + paf[0, :, :, 1, i]
+    return processed
+
+processed_paf = process_paf(paf)
+
+cv2.imshow('Parts Affinity Fields', processed_paf)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+cv2.imshow('mask', mask*255)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
 import matplotlib.pyplot as plt
 plt.plot(list(range(len(losses))), losses)
 plt.xlabel('Epcohs')
