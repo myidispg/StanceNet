@@ -61,7 +61,7 @@ paf = paf.numpy()
 mask = mask.numpy().astype(np.uint8)
 
 status = train(valid_dataloader, device, num_epochs=5, val_every=False,
-               print_every=100, resume=False)
+               print_every=100, resume=True)
 if status == None:
     print('There was some issue in the training process. Please check.')
 
