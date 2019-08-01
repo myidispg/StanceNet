@@ -60,10 +60,10 @@ conf = conf.numpy()
 paf = paf.numpy()
 mask = mask.numpy().astype(np.uint8)
 
-status = train(valid_dataloader, device, num_epochs=1, val_every=False,
+status = train(valid_dataloader, device, num_epochs=5, val_every=False,
                print_every=100, resume=False)
 if status == None:
-    print('There was some issue in the traiing process. Please check.')
+    print('There was some issue in the training process. Please check.')
 
 
 for batch, (img, conf_map, paf, mask) in enumerate(valid_dataloader):

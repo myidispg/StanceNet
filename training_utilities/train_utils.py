@@ -15,6 +15,10 @@ from models.full_model import OpenPoseModel
 import utilities.helper as helper
 import utilities.constants as constants
 
+def criterion(prediction, label):
+    sum = torch.sum((prediction - label)**2)
+    return sum
+
 def train_epoch(model, criterion_conf, criterion_paf, optimizer, 
                 dataloader, losses, device, print_every=5000):
     """
@@ -53,10 +57,10 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
 #                                    constants.im_width_small, constants.im_width_small)
         
 #        print(pafs.shape)
-        pafs = pafs.float().to(device).permute(0, 4, 3, 1, 2)
+        pafs = pafs.float().to(device).permute(0, 3, 1, 2)
 #        view(2, constants.num_limbs, 2,
 #                         constants.im_width_small, constants.im_width_small)
-        mask = mask.to(device)
+        mask = mask.to(device).view(mask.shape[0], 1, mask.shape[1], mask.shape[2])
         
         # Perform a forward pass through the model
         outputs = model(images)
@@ -71,14 +75,8 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         for i in range(1, 3): # Three stages: 1, 2 and 3
             conf_out = outputs[i]['conf']
             paf_out = outputs[i]['paf']
-            paf_out = paf_out.reshape(
-                    paf_out.shape[0],
-                    paf_out.shape[1] // 2,
-                    2,
-                    paf_out.shape[2],
-                    paf_out.shape[3])
-            loss_conf_total += criterion_conf(mask * conf_out, mask * conf_maps)
-            loss_paf_total += criterion_paf(mask * paf_out, mask * pafs)
+            loss_conf_total += criterion(mask * conf_out, mask * conf_maps)
+            loss_paf_total += criterion(mask * paf_out, mask * pafs)
         # Calculate the total loss for both the outputs: PAF and Conf map.
         loss = loss_conf_total + loss_paf_total
         # Set grads to zero to prevent accumulation.

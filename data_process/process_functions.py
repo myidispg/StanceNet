@@ -8,7 +8,7 @@ Created on Thu Jul 25 09:42:17 2019
 import cv2
 import numpy as np
 
-from utilities.constants import dataset_dir, im_width_small, im_height_small, transform_scale
+from utilities.constants import dataset_dir, img_size, transform_scale, MEAN, STD
 from utilities.constants import im_height, im_width, num_joints, skeleton_limb_indices
 
 def group_keypoints(keypoints):
@@ -22,6 +22,23 @@ def group_keypoints(keypoints):
         arranged_keypoints.append((keypoints[i], keypoints[i+1], keypoints[i+2]))
     
     return arranged_keypoints
+
+def normalize(img):
+#     img = img[:, :, ::-1]
+    img = (img - MEAN) / STD
+#     img = img.transpose(2, 0, 1)
+    return img
+
+def adjust_keypoints(keypoints, original_shape):
+  """
+  Adjust keypoints according to the new image size.
+  """
+  # For a sublist in keypoints
+  for list_ in range(len(keypoints)):
+    for i in range(0, len(keypoints[list_]), 3):
+      keypoints[list_][i] = (keypoints[list_][i]/original_shape[0]) * img_size
+      keypoints[list_][i] = (keypoints[list_][i]/original_shape[1]) * img_size
+  return keypoints
 
 def do_affine_transform(img, scale=0.25):
     """
@@ -55,10 +72,10 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
         conf_map: A numpy array of shape: (batch_size, im_width, im_height, num_joints)
     """
     if affine_transform:
-        conf_map = np.zeros((img_shape[0] // 4,
-                             img_shape[1] // 4, num_joints), np.float32)
+        conf_map = np.zeros((img_size // 4,
+                             img_size // 4, num_joints), np.float32)
     else:
-        conf_map = np.zeros((img_shape[0], img_shape[1], num_joints), np.float32)
+        conf_map = np.zeros((img_size, img_size, num_joints), np.float32)
     
     # For sub list in keypoints:
     for list_ in keypoints:
@@ -69,8 +86,8 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
             visibility = list_[i+2]
             
             if visibility != 0:
-                x_ind, y_ind = np.meshgrid(np.arange(img_shape[0]), 
-                                          np.arange(img_shape[1]))
+                x_ind, y_ind = np.meshgrid(np.arange(img_size), 
+                                          np.arange(img_size))
                 numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
                 heatmap_joint = np.exp(numerator/sigma).transpose()
                 if affine_transform:
@@ -97,10 +114,10 @@ def generate_paf(keypoints, img_shape, sigma=5, affine_transform=True):
     """
     
     if affine_transform:
-        paf = np.zeros((img_shape[0] // 4, img_shape[1] // 4, 2,
+        paf = np.zeros((img_size // 4, img_size // 4, 2,
                         len(skeleton_limb_indices)), np.float32)
     else:
-        paf = np.zeros((img_shape[0], img_shape[1], 2,
+        paf = np.zeros((img_size, img_size, 2,
                         len(skeleton_limb_indices), np.float32))
     
     # For sub list in keypoints
@@ -126,7 +143,7 @@ def generate_paf(keypoints, img_shape, sigma=5, affine_transform=True):
                 vector = part_line_segment / norm
                 # https://gamedev.stackexchange.com/questions/70075/how-can-i-find-the-perpendicular-to-a-2d-vector
                 perpendicular_vec = [-vector[1], vector[0]]
-                x, y = np.meshgrid(np.arange(img_shape[0]), np.arange(img_shape[1]))
+                x, y = np.meshgrid(np.arange(img_size), np.arange(img_size))
                  # Formula according to the paper
                 along_limb = vector[0] * (x-joint_one_loc[0]) + vector[1] * (y-joint_one_loc[1])
                 across_limb = np.abs(perpendicular_vec[0] * (x-joint_one_loc[0]) + perpendicular_vec[1] * (y - joint_one_loc[1])) 

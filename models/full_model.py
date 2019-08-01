@@ -17,8 +17,6 @@ class ConvolutionalBlock(nn.Module):
     def __init__(self, input_channels, output_channels=64):
         super(ConvolutionalBlock, self).__init__()
         
-        
-        
         self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(32, output_channels, kernel_size=3, stride=1, padding=1)
@@ -34,165 +32,247 @@ class ConvolutionalBlock(nn.Module):
         return output3
 
 class OpenPoseModel(nn.Module):
+  
+  def __init__(self, num_limbs, num_joints):
+    super(OpenPoseModel, self).__init__()
     
-    def __init__(self, num_limbs, num_joints):
-        super(OpenPoseModel, self).__init__()
-        
-        self.vgg = VGGFeatureExtractor(False)
-        
-        # ------PAF BLOCK----------------------
-        self.paf_block1_stage1 = ConvolutionalBlock(256)
-        
-        self.paf_block2_stage1 = ConvolutionalBlock(128)
-        self.paf_block3_stage1 = ConvolutionalBlock(128)
-        self.paf_block4_stage1 = ConvolutionalBlock(128)
-        self.paf_block5_stage1 = ConvolutionalBlock(128)
-        
-        self.paf_conv1_stage1 = nn.Conv2d(128, 32, kernel_size=1)
-        self.paf_conv2_stage1 = nn.Conv2d(32, num_limbs*2, kernel_size=1)
-        
-        self.paf_block1_stage2 = ConvolutionalBlock(286)
-        self.paf_block2_stage2 = ConvolutionalBlock(128)
-        self.paf_block3_stage2 = ConvolutionalBlock(128)
-        self.paf_block4_stage2 = ConvolutionalBlock(128)
-        self.paf_block5_stage2 = ConvolutionalBlock(128)
-        
-        self.paf_conv1_stage2 = nn.Conv2d(128, 32, kernel_size=1)
-        self.paf_conv2_stage2 = nn.Conv2d(32, num_limbs*2, kernel_size=1)
-        
-        self.paf_block1_stage3 = ConvolutionalBlock(286)
-        self.paf_block2_stage3 = ConvolutionalBlock(128)
-        self.paf_block3_stage3 = ConvolutionalBlock(128)
-        self.paf_block4_stage3 = ConvolutionalBlock(128)
-        self.paf_block5_stage3 = ConvolutionalBlock(128)
-        
-        self.paf_conv1_stage3 = nn.Conv2d(128, 32, kernel_size=1)
-        self.paf_conv2_stage3 = nn.Conv2d(32, num_limbs*2, kernel_size=1)
-        
-        # ---------CONFIDENCE MAPS BLOCK--------
-        self.conf_block1_stage1 = ConvolutionalBlock(286)
-        self.conf_block2_stage1 = ConvolutionalBlock(128)
-        self.conf_block3_stage1 = ConvolutionalBlock(128)
-        self.conf_block4_stage1 = ConvolutionalBlock(128)
-        self.conf_block5_stage1 = ConvolutionalBlock(128)
-        
-        self.conf_conv1_stage1 = nn.Conv2d(128, 32, kernel_size=1)
-        self.conf_conv2_stage1 = nn.Conv2d(32, num_joints, kernel_size=1)
-        
-        self.conf_block1_stage2 = ConvolutionalBlock(273)
-        self.conf_block2_stage2 = ConvolutionalBlock(128)
-        self.conf_block3_stage2 = ConvolutionalBlock(128)
-        self.conf_block4_stage2 = ConvolutionalBlock(128)
-        self.conf_block5_stage2 = ConvolutionalBlock(128)
-        
-        self.conf_conv1_stage2 = nn.Conv2d(128, 32, kernel_size=1)
-        self.conf_conv2_stage2 = nn.Conv2d(32, num_joints, kernel_size=1)
-        
-        self.conf_block1_stage3 = ConvolutionalBlock(273)
-        self.conf_block2_stage3 = ConvolutionalBlock(128)
-        self.conf_block3_stage3 = ConvolutionalBlock(128)
-        self.conf_block4_stage3 = ConvolutionalBlock(128)
-        self.conf_block5_stage3 = ConvolutionalBlock(128)
-        
-        self.conf_conv1_stage3 = nn.Conv2d(128, 32, kernel_size=1)
-        self.conf_conv2_stage3 = nn.Conv2d(32, num_joints, kernel_size=1)
-        
-    def forward_stage_1_pafs(self, input_data):
-        out = F.relu(self.paf_block1_stage1(input_data), inplace = True)
-        out = F.relu(self.paf_block2_stage1(out), inplace = True)
-        out = F.relu(self.paf_block3_stage1(out), inplace = True)
-        out = F.relu(self.paf_block4_stage1(out), inplace = True)
-        out = F.relu(self.paf_block5_stage1(out), inplace = True)
-        out = F.relu(self.paf_conv1_stage1(out), inplace = True)
-        return self.paf_conv2_stage1(out)
+    self.num_limb_joint_features = (num_limbs*2) + num_joints + 256
     
-    def forward_stage_2_pafs(self, input_data):
-        out = F.relu(self.paf_block1_stage2(input_data), inplace = True)
-        out = F.relu(self.paf_block2_stage2(out), inplace = True)
-        out = F.relu(self.paf_block3_stage2(out), inplace = True)
-        out = F.relu(self.paf_block4_stage2(out), inplace = True)
-        out = F.relu(self.paf_block5_stage2(out), inplace = True)
-        out = F.relu(self.paf_conv1_stage2(out), inplace = True)
-        return self.paf_conv2_stage2(out)
-        
-    def forward_stage_3_pafs(self, input_data):
-        out = F.relu(self.paf_block1_stage3(input_data), inplace = True)
-        out = F.relu(self.paf_block2_stage3(out), inplace = True)
-        out = F.relu(self.paf_block3_stage3(out), inplace = True)
-        out = F.relu(self.paf_block4_stage3(out), inplace = True)
-        out = F.relu(self.paf_block5_stage3(out), inplace = True)
-        out = F.relu(self.paf_conv1_stage3(out), inplace = True)
-        return self.paf_conv2_stage3(out)
+    self.vgg = VGGFeatureExtractor()
     
-    def forward_stage_1_conf(self, input_data):
-        out = F.relu(self.conf_block1_stage1(input_data), inplace=True)
-        out = F.relu(self.conf_block2_stage1(out), inplace=True)
-        out = F.relu(self.conf_block3_stage1(out), inplace=True)
-        out = F.relu(self.conf_block4_stage1(out), inplace=True)
-        out = F.relu(self.conf_block5_stage1(out), inplace=True)
-        out = F.relu(self.conf_conv1_stage1(out), inplace=True)
-        return self.conf_conv2_stage1(out)
+    # Stage 1
+    self.paf_1_stage_1 = nn.Conv2d(256, 64, kernel_size=3, stride=1, padding=1)
+    self.paf_2_stage_1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+    self.paf_3_stage_1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+    self.paf_4_stage_1 = nn.Conv2d(64, 64, kernel_size=1)
+    self.paf_5_stage_1 = nn.Conv2d(64, num_limbs*2, kernel_size=1)
     
-    def forward_stage_2_conf(self, input_data):
-        out = F.relu(self.conf_block1_stage2(input_data), inplace=True)
-        out = F.relu(self.conf_block2_stage2(out), inplace=True)
-        out = F.relu(self.conf_block3_stage2(out), inplace=True)
-        out = F.relu(self.conf_block4_stage2(out), inplace=True)
-        out = F.relu(self.conf_block5_stage2(out), inplace=True)
-        out = F.relu(self.conf_conv1_stage2(out), inplace=True)
-        return self.conf_conv2_stage2(out)
+    self.conf_1_stage_1 = nn.Conv2d(256, 64, kernel_size=3, stride=1, padding=1)
+    self.conf_2_stage_1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+    self.conf_3_stage_1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+    self.conf_4_stage_1 = nn.Conv2d(64, 64, kernel_size=1)
+    self.conf_5_stage_1 = nn.Conv2d(64, num_joints, kernel_size=1)
     
-    def forward_stage_3_conf(self, input_data):
-        out = F.relu(self.conf_block1_stage3(input_data), inplace=True)
-        out = F.relu(self.conf_block2_stage3(out), inplace=True)
-        out = F.relu(self.conf_block3_stage3(out), inplace=True)
-        out = F.relu(self.conf_block4_stage3(out), inplace=True)
-        out = F.relu(self.conf_block5_stage3(out), inplace=True)
-        out = F.relu(self.conf_conv1_stage3(out), inplace=True)
-        return self.conf_conv2_stage3(out)
-        
-    def forward(self, x):
-#        print(f'Input shape: {x.shape}')
-        
-        vgg_out = self.vgg(x)
-#        print(f'VGG Output shape: {vgg_out.shape}')        
-        
-        outputs = {1: {'paf': None, 'conf': None},
+    # Stage 2
+    self.paf_1_stage_2 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_2_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_3_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_4_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_5_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_6_stage_2 = nn.Conv2d(64, 64, kernel_size=1)
+    self.paf_7_stage_2 = nn.Conv2d(64, num_limbs * 2, kernel_size=1)
+    
+    self.conf_1_stage_2 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_2_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_3_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_4_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_5_stage_2 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_6_stage_2 = nn.Conv2d(64, 64, kernel_size=1)
+    self.conf_7_stage_2 = nn.Conv2d(64, num_joints, kernel_size=1)
+    
+    # Stage 3
+    self.paf_1_stage_3 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_2_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_3_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_4_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_5_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_6_stage_3 = nn.Conv2d(64, 64, kernel_size=1)
+    self.paf_7_stage_3 = nn.Conv2d(64, num_limbs * 2, kernel_size=1)
+    
+    self.conf_1_stage_3 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_2_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_3_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_4_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_5_stage_3 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_6_stage_3 = nn.Conv2d(64, 64, kernel_size=1)
+    self.conf_7_stage_3 = nn.Conv2d(64, num_joints, kernel_size=1)
+    
+    # Stage 4
+    self.paf_1_stage_4 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_2_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_3_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_4_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_5_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_6_stage_4 = nn.Conv2d(64, 64, kernel_size=1)
+    self.paf_7_stage_4 = nn.Conv2d(64, num_limbs * 2, kernel_size=1)
+    
+    self.conf_1_stage_4 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_2_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_3_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_4_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_5_stage_4 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_6_stage_4 = nn.Conv2d(64, 64, kernel_size=1)
+    self.conf_7_stage_4 = nn.Conv2d(64, num_joints, kernel_size=1)
+    
+    # Stage 5
+    self.paf_1_stage_5 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_2_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_3_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_4_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_5_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.paf_6_stage_5 = nn.Conv2d(64, 64, kernel_size=1)
+    self.paf_7_stage_5 = nn.Conv2d(64, num_limbs * 2, kernel_size=1)
+    
+    self.conf_1_stage_5 = nn.Conv2d(self.num_limb_joint_features, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_2_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_3_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_4_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_5_stage_5 = nn.Conv2d(64, 64, kernel_size=7, stride=1, padding=3)
+    self.conf_6_stage_5 = nn.Conv2d(64, 64, kernel_size=1)
+    self.conf_7_stage_5 = nn.Conv2d(64, num_joints, kernel_size=1)
+    
+  def forward_stage_1_paf(self, input):
+    out = F.relu(self.paf_1_stage_1(input), inplace=True)
+    out = F.relu(self.paf_2_stage_1(out), inplace=True)
+    out = F.relu(self.paf_3_stage_1(out), inplace=True)
+    out = F.relu(self.paf_4_stage_1(out), inplace=True)
+    out = F.relu(self.paf_5_stage_1(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_1_conf(self, input):
+    out = F.relu(self.conf_1_stage_1(input), inplace=True)
+    out = F.relu(self.conf_2_stage_1(out), inplace=True)
+    out = F.relu(self.conf_3_stage_1(out), inplace=True)
+    out = F.relu(self.conf_4_stage_1(out), inplace=True)
+    out = F.relu(self.conf_5_stage_1(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_2_paf(self, input):
+    out = F.relu(self.paf_1_stage_2(input), inplace=True)
+    out = F.relu(self.paf_2_stage_2(out), inplace=True)
+    out = F.relu(self.paf_3_stage_2(out), inplace=True)
+    out = F.relu(self.paf_4_stage_2(out), inplace=True)
+    out = F.relu(self.paf_5_stage_2(out), inplace=True)
+    out = F.relu(self.paf_6_stage_2(out), inplace=True)
+    out = F.relu(self.paf_7_stage_2(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_3_paf(self, input):
+    out = F.relu(self.paf_1_stage_3(input), inplace=True)
+    out = F.relu(self.paf_2_stage_3(out), inplace=True)
+    out = F.relu(self.paf_3_stage_3(out), inplace=True)
+    out = F.relu(self.paf_4_stage_3(out), inplace=True)
+    out = F.relu(self.paf_5_stage_3(out), inplace=True)
+    out = F.relu(self.paf_6_stage_3(out), inplace=True)
+    out = F.relu(self.paf_7_stage_3(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_4_paf(self, input):
+    out = F.relu(self.paf_1_stage_4(input), inplace=True)
+    out = F.relu(self.paf_2_stage_4(out), inplace=True)
+    out = F.relu(self.paf_3_stage_4(out), inplace=True)
+    out = F.relu(self.paf_4_stage_4(out), inplace=True)
+    out = F.relu(self.paf_5_stage_4(out), inplace=True)
+    out = F.relu(self.paf_6_stage_4(out), inplace=True)
+    out = F.relu(self.paf_7_stage_4(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_5_paf(self, input):
+    out = F.relu(self.paf_1_stage_5(input), inplace=True)
+    out = F.relu(self.paf_2_stage_5(out), inplace=True)
+    out = F.relu(self.paf_3_stage_5(out), inplace=True)
+    out = F.relu(self.paf_4_stage_5(out), inplace=True)
+    out = F.relu(self.paf_5_stage_5(out), inplace=True)
+    out = F.relu(self.paf_6_stage_5(out), inplace=True)
+    out = F.relu(self.paf_7_stage_5(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_2_conf(self, input):
+    out = F.relu(self.conf_1_stage_2(input), inplace=True)
+    out = F.relu(self.conf_2_stage_2(out), inplace=True)
+    out = F.relu(self.conf_3_stage_2(out), inplace=True)
+    out = F.relu(self.conf_4_stage_2(out), inplace=True)
+    out = F.relu(self.conf_5_stage_2(out), inplace=True)
+    out = F.relu(self.conf_6_stage_2(out), inplace=True)
+    out = F.relu(self.conf_7_stage_2(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_3_conf(self, input):
+    out = F.relu(self.conf_1_stage_3(input), inplace=True)
+    out = F.relu(self.conf_2_stage_3(out), inplace=True)
+    out = F.relu(self.conf_3_stage_3(out), inplace=True)
+    out = F.relu(self.conf_4_stage_3(out), inplace=True)
+    out = F.relu(self.conf_5_stage_3(out), inplace=True)
+    out = F.relu(self.conf_6_stage_3(out), inplace=True)
+    out = F.relu(self.conf_7_stage_3(out), inplace=True)
+    
+    return out
+    
+  def forward_stage_4_conf(self, input):
+    out = F.relu(self.conf_1_stage_4(input), inplace=True)
+    out = F.relu(self.conf_2_stage_4(out), inplace=True)
+    out = F.relu(self.conf_3_stage_4(out), inplace=True)
+    out = F.relu(self.conf_4_stage_4(out), inplace=True)
+    out = F.relu(self.conf_5_stage_4(out), inplace=True)
+    out = F.relu(self.conf_6_stage_4(out), inplace=True)
+    out = F.relu(self.conf_7_stage_4(out), inplace=True)
+    
+    return out
+  
+  def forward_stage_5_conf(self, input):
+    out = F.relu(self.conf_1_stage_5(input), inplace=True)
+    out = F.relu(self.conf_2_stage_5(out), inplace=True)
+    out = F.relu(self.conf_3_stage_5(out), inplace=True)
+    out = F.relu(self.conf_4_stage_5(out), inplace=True)
+    out = F.relu(self.conf_5_stage_5(out), inplace=True)
+    out = F.relu(self.conf_6_stage_5(out), inplace=True)
+    out = F.relu(self.conf_7_stage_5(out), inplace=True)
+    
+    return out
+  
+  def forward(self, x):
+    vgg_out = self.vgg(x)
+    
+    outputs = {1: {'paf': None, 'conf': None},
                    2: {'paf': None, 'conf': None},
-                   3: {'paf': None, 'conf': None}}
-        
-        # PAF BLOCK
-        out_stage1_pafs = self.forward_stage_1_pafs(vgg_out)
-        outputs[1]['paf'] = out_stage1_pafs
-        out_stage1_pafs = torch.cat([out_stage1_pafs, vgg_out], 1)
-        
-        out_stage2_pafs = self.forward_stage_2_pafs(out_stage1_pafs)
-        outputs[2]['paf'] = out_stage2_pafs
-        out_stage2_pafs = torch.cat([out_stage2_pafs, vgg_out], 1)
-        
-        out_stage3_pafs = self.forward_stage_3_pafs(out_stage2_pafs)
-        outputs[3]['paf'] = out_stage3_pafs
-        out_stage3_pafs = torch.cat([out_stage3_pafs, vgg_out], 1)
-      
-#        # CONF BLOCK
-        out_stage1_conf = self.forward_stage_1_conf(out_stage3_pafs)
-        outputs[1]['conf'] = out_stage1_conf
-        out_stage1_conf = torch.cat([out_stage1_conf, vgg_out], 1)
-        
-        out_stage2_conf = self.forward_stage_2_conf(out_stage1_conf)
-        outputs[2]['conf'] = out_stage2_conf
-        out_stage2_conf = torch.cat([out_stage2_conf, vgg_out], 1)
-        
-        out_stage3_conf = self.forward_stage_3_conf(out_stage2_conf)
-        outputs[3]['conf'] = out_stage3_conf
-        
-        return outputs
+                   3: {'paf': None, 'conf': None},
+                   4: {'paf': None, 'conf': None},
+                   5: {'paf': None, 'conf': None},}
+    
+    # Stage 1
+    out_paf = self.forward_stage_1_paf(vgg_out)
+    out_conf = self.forward_stage_1_conf(vgg_out)
+    outputs[1]['paf'] = out_paf
+    outputs[1]['conf'] = out_conf
+    
+    # Stage 2
+    out_paf = self.forward_stage_2_paf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    out_conf = self.forward_stage_2_conf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    outputs[2]['paf'] = out_paf
+    outputs[2]['conf'] = out_conf
+    
+    # Stage 3
+    out_paf = self.forward_stage_3_paf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    out_conf = self.forward_stage_3_conf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    outputs[3]['paf'] = out_paf
+    outputs[3]['conf'] = out_conf
+    
+    # Stage 4
+    out_paf = self.forward_stage_4_paf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    out_conf = self.forward_stage_4_conf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    outputs[4]['paf'] = out_paf
+    outputs[4]['conf'] = out_conf
+    
+    # Stage 5
+    out_paf = self.forward_stage_5_paf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    out_conf = self.forward_stage_5_conf(torch.cat([out_paf, out_conf, vgg_out], 1))
+    outputs[5]['paf'] = out_paf
+    outputs[5]['conf'] = out_conf
+    
+    return outputs
 #
 #model = OpenPoseModel(15, 17).to(torch.device('cuda'))
-#outputs = model(torch.from_numpy(np.ones((1, 3, 640, 425))).float().to(torch.device('cuda')))
+#outputs = model(torch.from_numpy(np.ones((2, 3, 368, 368))).float().to(torch.device('cuda')))
 #for j in range(10):
 #    print(f'Round {j+1}')
-#    outputs = model(torch.from_numpy(np.ones((1, 3, 368, 368))).float().to(torch.device('cuda')))
+#    outputs = model(torch.from_numpy(np.ones((1, 3, 400, 400))).float().to(torch.device('cuda')))
 #    for i in range(1, 4):
 #        print(f'Stage {i} paf: {outputs[i]["paf"].shape}')
 #        print(f'Stage {i} conf: {outputs[i]["conf"].shape}')
