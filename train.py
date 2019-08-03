@@ -22,8 +22,8 @@ from training_utilities.stancenet_dataset import StanceNetDataset
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print('Loading training COCO Annotations used for mask generation. Might take time.')
-#coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
-#                       'annotations', 'person_keypoints_train2017.json'))
+coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+                       'annotations', 'person_keypoints_train2017.json'))
 coco_valid = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
                        'annotations', 'person_keypoints_val2017.json'))
 
@@ -44,24 +44,24 @@ def collate_fn(batch):
         output.append(tuple(batch_data))
     return output
         
-#train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir, 'train2017'))
+train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir, 'train2017'))
 valid_data = StanceNetDataset(coco_valid, 
                               os.path.join(constants.dataset_dir, 'val2017'))
 
-#train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=2,
-#                                               shuffle=True, collate_fn=collate_fn)
+train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=1,
+                                               shuffle=True)
 valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=1,
                                                shuffle=True)
 
-for img, conf, paf, mask in valid_dataloader:
-    break
+#for img, conf, paf, mask in train_dataloader:
+#    break
+#
+#conf = conf.numpy()
+#paf = paf.numpy()
+#mask = mask.numpy().astype(np.uint8)
 
-conf = conf.numpy()
-paf = paf.numpy()
-mask = mask.numpy().astype(np.uint8)
-
-status = train(valid_dataloader, device, num_epochs=5, val_every=False,
-               print_every=100, resume=True)
+status = train(valid_dataloader, device, num_epochs=2, val_every=False,
+               print_every=50, resume=True)
 if status == None:
     print('There was some issue in the training process. Please check.')
 

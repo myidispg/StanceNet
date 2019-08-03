@@ -53,18 +53,12 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         # Convert all to PyTorch Tensors and move to the training device
         images = images.permute(0, 3, 1, 2).float().to(device)
         conf_maps = conf_maps.float().to(device).permute(0, 3, 1, 2)
-#        view(2, constants.num_joints,
-#                                    constants.im_width_small, constants.im_width_small)
-        
-#        print(pafs.shape)
         pafs = pafs.float().to(device).permute(0, 3, 1, 2)
-#        view(2, constants.num_limbs, 2,
-#                         constants.im_width_small, constants.im_width_small)
         mask = mask.to(device).view(mask.shape[0], 1, mask.shape[1], mask.shape[2])
         
         # Perform a forward pass through the model
         outputs = model(images)
-        # Outputs is a dictionary with 3 keys for each stage. Keys are 1, 2, 3.
+        # Outputs is a dictionary with 5 keys for each stage. Keys are 1, 2, 3, 4 and 5.
         # Each key has another dictionary. Each sub-dictionary has 2 keys:
         # 'paf' or 'conf' for storing output of respective stage.
         
@@ -72,11 +66,11 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         # sum of losses of all stages.
         loss_conf_total = 0
         loss_paf_total = 0
-        for i in range(1, 3): # Three stages: 1, 2 and 3
+        for i in range(1, 6): # Three stages: 1, 2 and 3
             conf_out = outputs[i]['conf']
             paf_out = outputs[i]['paf']
-            loss_conf_total += criterion(mask * conf_out, mask * conf_maps)
-            loss_paf_total += criterion(mask * paf_out, mask * pafs)
+            loss_conf_total += criterion(conf_out, conf_maps)
+            loss_paf_total += criterion(paf_out, pafs)
         # Calculate the total loss for both the outputs: PAF and Conf map.
         loss = loss_conf_total + loss_paf_total
         # Set grads to zero to prevent accumulation.
@@ -129,7 +123,7 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
     
     model = OpenPoseModel(num_joints = constants.num_joints,
                           num_limbs=constants.num_limbs).to(device) 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     criterion_conf = torch.nn.MSELoss()
     criterion_paf = torch.nn.MSELoss()
     
@@ -151,7 +145,10 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
         checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint['model_state'])
         optimizer.load_state_dict(checkpoint['optimizer_state'])
-        losses = checkpoint['losses']
+        try:
+            losses = checkpoint['losses']
+        except KeyError:
+            losses = []
     
     # Begin training for the specified number of epochs.
     print(f'Epoch {latest_epoch}')
