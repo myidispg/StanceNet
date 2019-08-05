@@ -12,7 +12,7 @@ im_width = 368
 im_height_small = 92
 im_width_small = 92
 
-img_size = 400 # All the images will be resized to this size. PAFs, mask etc. will be adjusted accordingly.
+img_size = 368 # All the images will be resized to this size. PAFs, mask etc. will be adjusted accordingly.
 
 # IMAGE NET CONSTANTS
 MEAN = [0.485, 0.456, 0.406],

@@ -91,7 +91,8 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
                 numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
                 heatmap_joint = np.exp(numerator/sigma).transpose()
                 if affine_transform:
-                    heatmap_joint = do_affine_transform(heatmap_joint)
+                    heatmap_joint = cv2.resize(heatmap_joint, (img_size // 4, img_size // 4))
+#                    heatmap_joint = do_affine_transform(heatmap_joint)
                 conf_map[:, :, part_num] = np.maximum(heatmap_joint, conf_map[:, :, part_num])
             
             part_num += 1
@@ -157,7 +158,8 @@ def generate_paf(keypoints, img_shape, sigma=5, affine_transform=True):
                 
                 # put the values
                 if affine_transform:
-                    mask = do_affine_transform(mask)
+                    mask = cv2.resize(mask, (img_size // 4, img_size // 4))
+#                    mask = do_affine_transform(mask)
                     paf[:, :, 0, limb] += mask * vector[0]
                     paf[:, :, 1, limb] += mask * vector[1]
                 else:

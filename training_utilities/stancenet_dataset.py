@@ -53,20 +53,20 @@ class StanceNetDataset(Dataset):
         
         # Load the image
         img_name = os.path.join(self.img_dir, get_image_name(img_index))
-        img = cv2.imread(img_name).transpose(1, 0, 2)
+        img = cv2.imread(img_name).transpose(1, 0, 2)/255
         original_shape = img.shape[:2]
         # Resize image to 400x400 dimensions.
-        img = cv2.resize(normalize(img/255), (img_size, img_size))
+        img = cv2.resize(normalize(img), (img_size, img_size))
         # Get the annotation id of the annotaions about the image.
         annotations_indices = self.coco.getAnnIds(img_index)
         # Load the annotations from the annotaion ids.
         annotations = self.coco.loadAnns(annotations_indices) 
         keypoints = []
-        mask = np.zeros((img.shape[:2]), np.uint8)
+        mask = np.zeros((img_size // 4, img_size // 4), np.uint8)
         for annotation in annotations:
             if annotation['num_keypoints'] != 0:
                 keypoints.append(annotation['keypoints'])
-            mask = mask | cv2.resize(self.coco.annToMask(annotation), (img_size, img_size))
+            mask = mask | cv2.resize(self.coco.annToMask(annotation), (img_size // 4, img_size // 4))
             
         # Adjust keypoints according to resized images.
         keypoints = adjust_keypoints(keypoints, original_shape)
@@ -75,6 +75,6 @@ class StanceNetDataset(Dataset):
         paf = generate_paf(keypoints, img.shape[:2])
         paf = paf.reshape(paf.shape[0], paf.shape[1], paf.shape[2] * paf.shape[3])
         
-        return img, conf_maps, paf, do_affine_transform(mask)
+        return img, conf_maps, paf, mask.transpose()
         
         

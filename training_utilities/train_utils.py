@@ -69,8 +69,8 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         for i in range(1, 6): # Three stages: 1, 2 and 3
             conf_out = outputs[i]['conf']
             paf_out = outputs[i]['paf']
-            loss_conf_total += criterion(conf_out, conf_maps)
-            loss_paf_total += criterion(paf_out, pafs)
+            loss_conf_total += criterion(mask * conf_out, mask * conf_maps)
+            loss_paf_total += criterion(mask *paf_out, mask * pafs)
         # Calculate the total loss for both the outputs: PAF and Conf map.
         loss = loss_conf_total + loss_paf_total
         # Set grads to zero to prevent accumulation.
