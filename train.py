@@ -7,6 +7,7 @@ Created on Sun Jul 21 18:33:28 2019
 
 import os
 import torch
+import cv2
 
 import numpy as np
 
@@ -50,7 +51,7 @@ valid_data = StanceNetDataset(coco_valid,
 #
 #train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=1,
 #                                               shuffle=True)
-valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=1,
+valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=3,
                                                shuffle=True)
 
 #for img, conf, paf, mask in train_dataloader:
@@ -67,19 +68,21 @@ if status == None:
 
 
 for batch, (img, conf_map, paf, mask) in enumerate(valid_dataloader):
-    img = ((img.numpy() * constants.STD) + constants.MEAN) * 255
+    img = ((img.numpy() * constants.STD) + constants.MEAN)
+    img = img.reshape(img.shape[1], img.shape[2], -1)
+    mask = mask.numpy().reshape(mask.shape[1], -1) * 255
     cv2.imshow('image', img)
     cv2.waitKey()
     cv2.destroyAllWindows() 
-    cv2.imshow('image', conf_map.numpy())
+    cv2.imshow('image', mask)
     cv2.waitKey()
     cv2.destroyAllWindows()
-    cv2.imshow('image', paf.numpy())
-    cv2.waitKey()
-    cv2.destroyAllWindows()
-    cv2.imshow('image', mask.numpy())
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+#    cv2.imshow('image', conf_map.numpy())
+#    cv2.waitKey()
+#    cv2.destroyAllWindows()
+#    cv2.imshow('image', paf.numpy())
+#    cv2.waitKey()
+#    cv2.destroyAllWindows()
 #    print(type(data[0][0]))
     break
 

@@ -11,6 +11,7 @@ import os
 import numpy as np
 
 from models.full_model import OpenPoseModel
+from models.paf_model import StanceNet
 
 import utilities.helper as helper
 import utilities.constants as constants
@@ -50,11 +51,13 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
     
     # Use the DataGenerator to generate batches of data and perform training.
     for batch_num, (images, conf_maps, pafs, mask) in enumerate(dataloader):
+        
+        
         # Convert all to PyTorch Tensors and move to the training device
         images = images.permute(0, 3, 1, 2).float().to(device)
         conf_maps = conf_maps.float().to(device).permute(0, 3, 1, 2)
         pafs = pafs.float().to(device).permute(0, 3, 1, 2)
-        mask = mask.to(device).view(mask.shape[0], 1, mask.shape[1], mask.shape[2])
+        mask = mask.float().to(device).view(mask.shape[0], 1, mask.shape[1], mask.shape[2])
         
         # Perform a forward pass through the model
         outputs = model(images)
@@ -66,7 +69,7 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         # sum of losses of all stages.
         loss_conf_total = 0
         loss_paf_total = 0
-        for i in range(1, 6): # Three stages: 1, 2 and 3
+        for i in range(3): # Three stages: 1, 2 and 3
             conf_out = outputs[i]['conf']
             paf_out = outputs[i]['paf']
             loss_conf_total += criterion(mask * conf_out, mask * conf_maps)
@@ -121,8 +124,10 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
     # Hence the number of sub-lists is equal to the number of epochs for which
     # the model has been trained.
     
-    model = OpenPoseModel(num_joints = constants.num_joints,
-                          num_limbs=constants.num_limbs).to(device) 
+#    model = OpenPoseModel(num_joints = constants.num_joints,
+#                          num_limbs=constants.num_limbs).to(device)
+    model = StanceNet(n_joints=constants.num_joints,
+                      n_limbs = constants.num_limbs*2, n_stages=3).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     criterion_conf = torch.nn.MSELoss()
     criterion_paf = torch.nn.MSELoss()

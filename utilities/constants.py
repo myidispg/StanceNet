@@ -18,7 +18,7 @@ img_size = 368 # All the images will be resized to this size. PAFs, mask etc. wi
 MEAN = [0.485, 0.456, 0.406],
 STD = [0.229, 0.224, 0.225]
 
-transform_scale = 4
+transform_scale = 8
 
 num_joints = 17
 num_limbs = 15

@@ -11,7 +11,7 @@ import numpy as np
 import os
 import cv2
 
-from utilities.constants import img_size
+from utilities.constants import img_size, transform_scale
 from data_process.process_functions import generate_confidence_maps, normalize, adjust_keypoints
 from data_process.process_functions import generate_paf, do_affine_transform
 from utilities.helper import get_image_name
@@ -62,11 +62,14 @@ class StanceNetDataset(Dataset):
         # Load the annotations from the annotaion ids.
         annotations = self.coco.loadAnns(annotations_indices) 
         keypoints = []
-        mask = np.zeros((img_size // 4, img_size // 4), np.uint8)
+        mask = np.zeros((img_size // transform_scale, img_size // transform_scale),
+                        np.uint8)
         for annotation in annotations:
             if annotation['num_keypoints'] != 0:
                 keypoints.append(annotation['keypoints'])
-            mask = mask | cv2.resize(self.coco.annToMask(annotation), (img_size // 4, img_size // 4))
+            mask = mask | cv2.resize(self.coco.annToMask(annotation),
+                                     (img_size // transform_scale,
+                                      img_size // transform_scale))
             
         # Adjust keypoints according to resized images.
         keypoints = adjust_keypoints(keypoints, original_shape)

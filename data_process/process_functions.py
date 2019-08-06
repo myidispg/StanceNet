@@ -72,8 +72,8 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
         conf_map: A numpy array of shape: (batch_size, im_width, im_height, num_joints)
     """
     if affine_transform:
-        conf_map = np.zeros((img_size // 4,
-                             img_size // 4, num_joints), np.float32)
+        conf_map = np.zeros((img_size // transform_scale,
+                             img_size // transform_scale, num_joints), np.float32)
     else:
         conf_map = np.zeros((img_size, img_size, num_joints), np.float32)
     
@@ -91,7 +91,8 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
                 numerator = (-(x_ind-x_index)**2) + (-(y_ind-y_index)**2)
                 heatmap_joint = np.exp(numerator/sigma).transpose()
                 if affine_transform:
-                    heatmap_joint = cv2.resize(heatmap_joint, (img_size // 4, img_size // 4))
+                    heatmap_joint = cv2.resize(heatmap_joint, (img_size // transform_scale,
+                                                               img_size // transform_scale))
 #                    heatmap_joint = do_affine_transform(heatmap_joint)
                 conf_map[:, :, part_num] = np.maximum(heatmap_joint, conf_map[:, :, part_num])
             
@@ -115,7 +116,7 @@ def generate_paf(keypoints, img_shape, sigma=5, affine_transform=True):
     """
     
     if affine_transform:
-        paf = np.zeros((img_size // 4, img_size // 4, 2,
+        paf = np.zeros((img_size // transform_scale, img_size // transform_scale, 2,
                         len(skeleton_limb_indices)), np.float32)
     else:
         paf = np.zeros((img_size, img_size, 2,
@@ -158,7 +159,8 @@ def generate_paf(keypoints, img_shape, sigma=5, affine_transform=True):
                 
                 # put the values
                 if affine_transform:
-                    mask = cv2.resize(mask, (img_size // 4, img_size // 4))
+                    mask = cv2.resize(mask, (img_size // transform_scale,
+                                             img_size // transform_scale))
 #                    mask = do_affine_transform(mask)
                     paf[:, :, 0, limb] += mask * vector[0]
                     paf[:, :, 1, limb] += mask * vector[1]
