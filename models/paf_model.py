@@ -77,7 +77,7 @@ def make_paf_block_stage2(inp_feats, output_feats):
         
 
 #import numpy as np
-#
+
 #model = StanceNet(17, 30, 3).to(torch.device('cuda'))
 #input_ = torch.from_numpy(np.zeros((4, 3, 368, 368))).float().to(torch.device('cuda'))
 #outputs = model(input_)

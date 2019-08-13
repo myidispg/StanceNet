@@ -29,6 +29,7 @@ class VGGFeatureExtractor(nn.Module):
         x = self.vgg(x)
         x = self.feature_extractor(x)
         return x
+    
 #vgg = VGGFeatureExtractor()
 #input_ = torch.from_numpy(np.zeros((1, 3, 368, 368))).float()
 #output = vgg(input_).detach().numpy()

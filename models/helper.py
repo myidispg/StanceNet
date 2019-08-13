@@ -19,11 +19,17 @@ def init(model):
             m.bias.data.zero_()
 
 
-def make_standard_block(feat_in, feat_out, kernel, stride=1, padding=1, use_bn=True):
+def make_standard_block(feat_in, feat_out, kernel, stride=1, padding=1):
     layers = []
     layers += [nn.Conv2d(feat_in, feat_out, kernel, stride, padding)]
-    if use_bn:
-        layers += [nn.BatchNorm2d(feat_out, eps=1e-05, momentum=0.1, affine=True,
-                                  track_running_stats=True)]
     layers += [nn.ReLU(inplace=True)]
     return nn.Sequential(*layers)
+
+#def make_standard_block(feat_in, feat_out, kernel, stride=1, padding=1, use_bn=False):
+#    layers = []
+#    layers += [nn.Conv2d(feat_in, feat_out, kernel, stride, padding)]
+#    if use_bn:
+#        layers += [nn.BatchNorm2d(feat_out, eps=1e-05, momentum=0.1, affine=True,
+#                                  track_running_stats=True)]
+#    layers += [nn.ReLU(inplace=True)]
+#    return nn.Sequential(*layers)

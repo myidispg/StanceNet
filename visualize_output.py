@@ -14,30 +14,42 @@ import os
 
 #from models.full_model import OpenPoseModel
 from models.paf_model import StanceNet
+from models.bodypose_model import bodypose_model
+from models.posenet import CocoPoseNet
 from utilities.constants import MEAN, STD
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
 #model = OpenPoseModel(15, 17).to(device).eval()
-model = StanceNet(17, 30, n_stages=5).eval()
+#model = StanceNet(19, 38, n_stages=5).eval()
+model = bodypose_model()
+model.load_state_dict(torch.load('body_pose_model_hzzone.pth'))
+#model = CocoPoseNet()
+#model.load_state_dict(torch.load('posenet.pth'))
 
-checkpoint = torch.load(os.path.join('trained_models', 'stancenet_1_epochs.pth'))
-model.load_state_dict(checkpoint['model_state'])
+#checkpoint = torch.load(os.path.join('trained_models', 'stancenet_1_epochs.pth'))
+#model.load_state_dict(checkpoint['model_state'])
 
-model = model.to(torch.device('cpu'))
+#model = model.to(torch.device('cpu'))
+model = model.to(device)
 
 img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000000785.jpg'))
-img = ((img/255)-MEAN)/STD
+#img = cv2.imread(os.path.join('Coco_Dataset', 'train2017', '000000000036.jpg'))
+#img = ((img/255)-MEAN)/STD
+img = cv2.resize(img, (368, 368))
 cv2.imshow('image', img)
 cv2.waitKey()
 cv2.destroyAllWindows()
 
-img = cv2.resize(img, (400, 400))
 img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).permute(0, 3, 1, 2)
 
+#img = img.float()
 img = img.to(device).float()
 
 outputs = model(img)
+
+paf = outputs[0].cpu().detach().numpy()
+conf = outputs[1].cpu().detach().numpy()
 
 for i in range(5):
     print(f'i: {i}, paf: {outputs[i]["paf"].sum()}')
@@ -53,26 +65,26 @@ paf = paf.transpose(2, 3, 1, 0)
 paf = paf.reshape(paf.shape[0], paf.shape[1], 2, -1)
 
 # Visualize Confidence map
-conf_map = np.zeros((50, 50))
+conf_map = np.zeros((conf.shape[0], conf.shape[1]))
 for i in range(conf.shape[2]):
     conf_map += conf[:, :, i]
 
 conf_map = cv2.resize(conf_map, (400, 400))
 
-#conf_map = (conf_map > 0.7).astype(np.float32)
+conf_map = (conf_map > 1.3).astype(np.float32)
 
-cv2.imshow('conf map', conf_map*255)
+cv2.imshow('conf map', conf_map)
 cv2.waitKey()
 cv2.destroyAllWindows()
 
 # Visualize Parts Affinity Fields
-paf_map = np.zeros((50, 50))
+paf_map = np.zeros((paf.shape[0], paf.shape[1]))
 for i in range(paf.shape[3]):
     paf_map += paf[:, :, 0, i] + paf[:, :, 1, i]
 
 paf_map = cv2.resize(paf_map, (400, 400))
 
-paf_map = (paf_map > 0.01).astype(np.float32)
+paf_map = (paf_map > 0.3).astype(np.float32)
 
 cv2.imshow('paf map', paf_map*255)
 cv2.waitKey()
@@ -82,7 +94,8 @@ cv2.destroyAllWindows()
 import matplotlib.pyplot as plt
 
 losses = checkpoint['losses']
-plt.plot(range(len(losses)), losses)
+losses = np.asarray(losses)
+plt.plot(range(losses.shape[0]), losses)
 plt.show()
 
 losses = [8334, 6148, 6241, 6658, 6073, 5948, 6669, 6380, 6299, 6538, 6187, 6219, 
