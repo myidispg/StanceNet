@@ -29,7 +29,20 @@ sigma = 1500
 dataset_dir = os.path.join(os.getcwd(), 'Coco_Dataset')
 model_path = os.path.join(os.getcwd(), 'trained_models')
 
+# Since I had to use a pre-trained model for inference as training was taking 
+# a very long time on my machine, I had to map the keypoints order in coco data
+# to the joint indexes used in the pre-trained model.
+# in the pre-trained model's skeleton, joint 1 is the neck joint.
+joint_map_coco = [(0, 0), (1, 15), (2, 14), (3, 17), (4, 16), (5, 5), (6, 2), 
+                  (7, 6), (8, 3), (9, 7), (10, 4), (11, 11), (12, 8), (13, 12), 
+                  (14, 9), (15, 13), (16, 10)]
+                    
+
 # The joint pairs to create skeletons.
 skeleton_limb_indices = [(3,5), (3,2), (2, 4), (7,6), (7,9), (9,11), (6,8),
                          (8,10), (7,13), (6,12), (13,15), (12,14), (15,17),
                          (14, 16), (13, 12)]
+
+limbSeq = [[2, 3], [2, 6], [3, 4], [4, 5], [6, 7], [7, 8], [2, 9], [9, 10], \
+           [10, 11], [2, 12], [12, 13], [13, 14], [2, 1], [1, 15], [15, 17], \
+           [1, 16], [16, 18], [3, 17], [6, 18]]

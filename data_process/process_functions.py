@@ -8,7 +8,8 @@ Created on Thu Jul 25 09:42:17 2019
 import cv2
 import numpy as np
 
-from utilities.constants import dataset_dir, img_size, transform_scale, MEAN, STD
+from utilities.constants import dataset_dir, img_size, transform_scale 
+from utilities.constants import MEAN, STD, joint_map_coco
 from utilities.constants import im_height, im_width, num_joints, skeleton_limb_indices
 
 def group_keypoints(keypoints):
@@ -24,9 +25,7 @@ def group_keypoints(keypoints):
     return arranged_keypoints
 
 def normalize(img):
-#     img = img[:, :, ::-1]
     img = (img - MEAN) / STD
-#     img = img.transpose(2, 0, 1)
     return img
 
 def adjust_keypoints(keypoints, original_shape):
@@ -36,9 +35,23 @@ def adjust_keypoints(keypoints, original_shape):
   # For a sublist in keypoints
   for list_ in range(len(keypoints)):
     for i in range(0, len(keypoints[list_]), 3):
-      keypoints[list_][i] = (keypoints[list_][i]/original_shape[0]) * img_size
-      keypoints[list_][i] = (keypoints[list_][i]/original_shape[1]) * img_size
+      keypoints[list_][i] = int((keypoints[list_][i]/original_shape[0]) * img_size)
+      keypoints[list_][i+1] = int((keypoints[list_][i+1]/original_shape[1]) * img_size)
   return keypoints
+
+def add_neck_joint(keypoints):
+    """
+    Takes in the list of all keypoints for an image and returns a list of all the neck
+    """
+    neck_keypoints = []
+    for list_ in keypoints:
+        if list_[(6*3) + 2] != 0 and list_[(5*3) + 2] != 0:
+            neck_x = (list_[6*3] + list_[5*3]) // 2
+            neck_y = (list_[(6*3) + 1] + list_[(5*3) + 1]) // 2
+    #        print(f'x: {neck_x}, y: {neck_y}')
+            neck_keypoints.append((neck_x, neck_y))
+        
+    return neck_keypoints
 
 def do_affine_transform(img, scale=0.25):
     """
@@ -57,7 +70,7 @@ def do_affine_transform(img, scale=0.25):
     transformation_matrix = np.asarray(transformation_matrix, dtype=np.float32)
     return cv2.warpAffine(np.float32(img), transformation_matrix, (int(cols*scale), int(rows*scale)))
 
-def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=7):
+def generate_confidence_maps(keypoints, affine_transform=True, sigma=7):
     """
     Generate confidence maps for a batch of indices.
     The generated confidence_maps are of shape: 
@@ -73,9 +86,9 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
     """
     if affine_transform:
         conf_map = np.zeros((img_size // transform_scale,
-                             img_size // transform_scale, num_joints), np.float32)
+                             img_size // transform_scale, num_joints + 2), np.float32)
     else:
-        conf_map = np.zeros((img_size, img_size, num_joints), np.float32)
+        conf_map = np.zeros((img_size, img_size, num_joints + 2), np.float32)
     
     # For sub list in keypoints:
     for list_ in keypoints:
@@ -94,10 +107,29 @@ def generate_confidence_maps(keypoints, img_shape, affine_transform=True, sigma=
                     heatmap_joint = cv2.resize(heatmap_joint, (img_size // transform_scale,
                                                                img_size // transform_scale))
 #                    heatmap_joint = do_affine_transform(heatmap_joint)
-                conf_map[:, :, part_num] = np.maximum(heatmap_joint, conf_map[:, :, part_num])
+                # Since, the pre-trained model uses different mapping, explained
+                # in constants.py
+                joint_index = joint_map_coco[part_num][1]
+                print(joint_index)
+                conf_map[:, :, joint_index] = np.maximum(heatmap_joint, conf_map[:, :, joint_index])
             
             part_num += 1
-                    
+    
+    # Get the neck location and add to conf_map
+    neck = add_neck_joint(keypoints)
+    for keypoint in neck:
+        x, y = np.meshgrid(np.arange(img_size), np.arange(img_size))
+        numerator = (-(x - keypoint[0]) ** 2) + (-(y - keypoint[1]) ** 2)
+        heatmap_neck = np.exp(numerator/sigma).transpose()
+        if affine_transform:
+            heatmap_neck = cv2.resize(heatmap_neck, (img_size // transform_scale,
+                                                     img_size // transform_scale))
+        conf_map[:, :, 1] = np.maximum(heatmap_neck, conf_map[:, :, 1])
+    
+    # Add the sum of all heatmaps to the last index
+    for i in range(18):
+        conf_map[:, :, 18] += conf_map[:, :, i]
+    
     return conf_map
     
 

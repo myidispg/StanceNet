@@ -13,17 +13,31 @@ import os
 
 
 #from models.full_model import OpenPoseModel
-from models.paf_model import StanceNet
+from models.paf_model_v2 import StanceNet
 from models.bodypose_model import bodypose_model
-from models.posenet import CocoPoseNet
 from utilities.constants import MEAN, STD
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
 #model = OpenPoseModel(15, 17).to(device).eval()
-#model = StanceNet(19, 38, n_stages=5).eval()
-model = bodypose_model()
-model.load_state_dict(torch.load('body_pose_model_hzzone.pth'))
+model = StanceNet(19, 38,).eval()
+model.load_state_dict(torch.load('trained_model.pth'))
+#model = bodypose_model()
+#model.load_state_dict(torch.load('body_pose_model_hzzone.pth'))
+#state_dict = model.state_dict()
+#stance_state = stance.state_dict()
+#
+#stance_keys = list(stance_state.keys())
+#model_keys = list(state_dict.keys())
+#new_state = dict()
+#for s_k, m_k in zip(stance_keys, model_keys):
+#    new_state[s_k] = state_dict[m_k]
+#
+#stance.load_state_dict(new_state)
+#stance = stance.to(device)
+
+#torch.save(stance.state_dict(), 'trained_model.pth')
+
 #model = CocoPoseNet()
 #model.load_state_dict(torch.load('posenet.pth'))
 
@@ -35,8 +49,8 @@ model = model.to(device)
 
 img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000000785.jpg'))
 #img = cv2.imread(os.path.join('Coco_Dataset', 'train2017', '000000000036.jpg'))
-#img = ((img/255)-MEAN)/STD
-img = cv2.resize(img, (368, 368))
+img = ((img/255)-MEAN)/STD
+img = cv2.resize(img, (400, 400))
 cv2.imshow('image', img)
 cv2.waitKey()
 cv2.destroyAllWindows()
@@ -64,6 +78,13 @@ conf = conf.reshape(conf.shape[0], conf.shape[1], -1)
 paf = paf.transpose(2, 3, 1, 0)
 paf = paf.reshape(paf.shape[0], paf.shape[1], 2, -1)
 
+for i in range(conf.shape[2]):
+    conf_map = cv2.resize(conf[:, :, i], (400, 400))
+    
+    cv2.imshow('conf', conf_map)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
 # Visualize Confidence map
 conf_map = np.zeros((conf.shape[0], conf.shape[1]))
 for i in range(conf.shape[2]):
@@ -78,6 +99,18 @@ cv2.waitKey()
 cv2.destroyAllWindows()
 
 # Visualize Parts Affinity Fields
+
+for i in range(19):
+    paf_map = np.zeros((paf.shape[0], paf.shape[1]))
+    for j in range(2):
+        paf_map += paf[:, :, j, i] + paf[:, :, j, i]
+    
+    paf_map = cv2.resize(paf_map, (400, 400))
+    
+    cv2.imshow('paf map', paf_map)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
 paf_map = np.zeros((paf.shape[0], paf.shape[1]))
 for i in range(paf.shape[3]):
     paf_map += paf[:, :, 0, i] + paf[:, :, 1, i]

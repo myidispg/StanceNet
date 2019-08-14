@@ -99,4 +99,4 @@ class StanceNet(nn.Module):
 
         return out6_1, out6_2
     
-model = StanceNet(19, 38)
+#model = StanceNet(19, 38)

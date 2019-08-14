@@ -138,25 +138,25 @@ class bodypose_model(nn.Module):
 
         return out6_1, out6_2
 
-model = bodypose_model()
-old_state = torch.load('body_pose_model.pth')
-
-new_state_dict = {}
-for k, v in old_state.items():
-    # Handle the vgg layers
-    if 'M' not in k:
-        new_state_dict[f'model0.{k}'] = old_state[k]
-    elif 'CPM' in k:
-        info = k.split('.')[0]
-        info = info.split('_')
-        if len(info) == 4:
-            new_state_dict[f'model1_{info[3][-1]}.{k}'] = old_state[k]
-        else:
-            new_state_dict[f'model0.{k}'] = old_state[k]
-    else:
-        info = k.split('.')[0]
-        info = info.split('_')
-        new_state_dict[f'model{info[1][-1]}_{info[2][-1]}.{k}'] = old_state[k]
-
-model.load_state_dict(new_state_dict)
-torch.save(model.state_dict(), 'body_pose_model_hzzone.pth')
+#model = bodypose_model()
+#old_state = torch.load('body_pose_model.pth')
+#
+#new_state_dict = {}
+#for k, v in old_state.items():
+#    # Handle the vgg layers
+#    if 'M' not in k:
+#        new_state_dict[f'model0.{k}'] = old_state[k]
+#    elif 'CPM' in k:
+#        info = k.split('.')[0]
+#        info = info.split('_')
+#        if len(info) == 4:
+#            new_state_dict[f'model1_{info[3][-1]}.{k}'] = old_state[k]
+#        else:
+#            new_state_dict[f'model0.{k}'] = old_state[k]
+#    else:
+#        info = k.split('.')[0]
+#        info = info.split('_')
+#        new_state_dict[f'model{info[1][-1]}_{info[2][-1]}.{k}'] = old_state[k]
+#
+#model.load_state_dict(new_state_dict)
+#torch.save(model.state_dict(), 'body_pose_model_hzzone.pth')

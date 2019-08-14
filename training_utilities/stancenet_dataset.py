@@ -41,7 +41,6 @@ class StanceNetDataset(Dataset):
     def __len__(self):
         # The length will be equal to count of those images that have a person.
         return len(self.img_indices)
-#        return len(self.keypoints.keys())
     
     def __getitem__(self, idx):
         """
