@@ -23,20 +23,31 @@ from training_utilities.stancenet_dataset import StanceNetDataset
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print('Loading training COCO Annotations used for mask generation. Might take time.')
-coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
-                       'annotations', 'person_keypoints_train2017.json'))
+#coco_train = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+#                       'annotations', 'person_keypoints_train2017.json'))
+coco_val = COCO(os.path.join(os.path.join(os.getcwd(), 'Coco_Dataset'),
+                       'annotations', 'person_keypoints_val2017.json'))
 print('Annotation load complete.')
 
-train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir,
-                                                       'train2017'))
+#train_data = StanceNetDataset(coco_train, os.path.join(constants.dataset_dir,
+#                                                       'train2017'))
+val_data = StanceNetDataset(coco_val, os.path.join(constants.dataset_dir,
+                                                       'val2017'))
 
-train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=1,
+#train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=1,
+#                                               shuffle=True)
+val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=1,
                                                shuffle=True)
-status = train(train_dataloader, device, num_epochs=5, val_every=False,
+status = train(val_dataloader, device, num_epochs=5, val_every=False,
                print_every=50, resume=False)
 if status == None:
     print('There was some issue in the training process. Please check.')
 
+from models.paf_model_v2 import StanceNet
+model = StanceNet(n_joints=constants.num_joints,
+                      n_limbs = constants.num_limbs*2).to(device)
+input_  = torch.from_numpy(np.zeros((1, 3, 400, 400))).float().to(device)
+outputs = model(input_)
 
 def process_output_conf_map(image, scale_factor=4):
     """

@@ -22,29 +22,6 @@ device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 #model = OpenPoseModel(15, 17).to(device).eval()
 model = StanceNet(19, 38,).eval()
 model.load_state_dict(torch.load('trained_model.pth'))
-#model = bodypose_model()
-#model.load_state_dict(torch.load('body_pose_model_hzzone.pth'))
-#state_dict = model.state_dict()
-#stance_state = stance.state_dict()
-#
-#stance_keys = list(stance_state.keys())
-#model_keys = list(state_dict.keys())
-#new_state = dict()
-#for s_k, m_k in zip(stance_keys, model_keys):
-#    new_state[s_k] = state_dict[m_k]
-#
-#stance.load_state_dict(new_state)
-#stance = stance.to(device)
-
-#torch.save(stance.state_dict(), 'trained_model.pth')
-
-#model = CocoPoseNet()
-#model.load_state_dict(torch.load('posenet.pth'))
-
-#checkpoint = torch.load(os.path.join('trained_models', 'stancenet_1_epochs.pth'))
-#model.load_state_dict(checkpoint['model_state'])
-
-#model = model.to(torch.device('cpu'))
 model = model.to(device)
 
 img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000000785.jpg'))
@@ -60,27 +37,18 @@ img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).pe
 #img = img.float()
 img = img.to(device).float()
 
-outputs = model(img)
+paf, conf = model(img)
 
-paf = outputs[0].cpu().detach().numpy()
-conf = outputs[1].cpu().detach().numpy()
+paf = paf.cpu().detach().numpy()
+conf = conf.cpu().detach().numpy()
 
-for i in range(5):
-    print(f'i: {i}, paf: {outputs[i]["paf"].sum()}')
-    print(f'i: {i}, conf: {outputs[i]["conf"].sum()}')
-
-paf = outputs[4]['paf'].cpu().detach().numpy()
-conf = outputs[4]['conf'].cpu().detach().numpy()
-
-conf = conf.transpose(2, 3, 1, 0)
-conf = conf.reshape(conf.shape[0], conf.shape[1], -1)
-
-paf = paf.transpose(2, 3, 1, 0)
-paf = paf.reshape(paf.shape[0], paf.shape[1], 2, -1)
+# Remove the extra dimension of batch size
+conf = np.squeeze(conf.transpose(2, 3, 1, 0))
+paf = np.squeeze(paf.transpose(2, 3, 1, 0))
 
 for i in range(conf.shape[2]):
     conf_map = cv2.resize(conf[:, :, i], (400, 400))
-    
+    print(i)
     cv2.imshow('conf', conf_map)
     cv2.waitKey()
     cv2.destroyAllWindows()

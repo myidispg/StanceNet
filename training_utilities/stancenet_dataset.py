@@ -13,7 +13,7 @@ import cv2
 
 from utilities.constants import img_size, transform_scale
 from data_process.process_functions import generate_confidence_maps, normalize, adjust_keypoints
-from data_process.process_functions import generate_paf, do_affine_transform
+from data_process.process_functions import generate_paf, do_affine_transform, add_neck_joint
 from utilities.helper import get_image_name
 
 
@@ -52,6 +52,7 @@ class StanceNetDataset(Dataset):
         
         # Load the image
         img_name = os.path.join(self.img_dir, get_image_name(img_index))
+#        print(img_name)
         img = cv2.imread(img_name).transpose(1, 0, 2)/255
         original_shape = img.shape[:2]
         # Resize image to 400x400 dimensions.
@@ -70,11 +71,13 @@ class StanceNetDataset(Dataset):
                                      (img_size // transform_scale,
                                       img_size // transform_scale))
             
+        # Add neck joints to the list of keypoints
+        keypoints = add_neck_joint(keypoints)
         # Adjust keypoints according to resized images.
         keypoints = adjust_keypoints(keypoints, original_shape)
         
-        conf_maps = generate_confidence_maps(keypoints, img.shape[:2])
-        paf = generate_paf(keypoints, img.shape[:2])
+        conf_maps = generate_confidence_maps(keypoints)
+        paf = generate_paf(keypoints)
         paf = paf.reshape(paf.shape[0], paf.shape[1], paf.shape[2] * paf.shape[3])
         
         return img, conf_maps, paf, mask.transpose()

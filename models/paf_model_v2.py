@@ -64,20 +64,20 @@ class StanceNet(nn.Module):
         self.stage_6_1 = make_block_stage2(185, n_limbs)
         
         # Confidence Maps Section
-        self.stage_1_2 = make_block_stage1(128, n_joints)
-        self.stage_2_2 = make_block_stage2(185, n_joints)
-        self.stage_3_2 = make_block_stage2(185, n_joints)
-        self.stage_4_2 = make_block_stage2(185, n_joints)
-        self.stage_5_2 = make_block_stage2(185, n_joints)
-        self.stage_6_2 = make_block_stage2(185, n_joints)
+        self.stage_1_2 = make_block_stage1(128, n_joints + 1)
+        self.stage_2_2 = make_block_stage2(185, n_joints + 1)
+        self.stage_3_2 = make_block_stage2(185, n_joints + 1)
+        self.stage_4_2 = make_block_stage2(185, n_joints + 1)
+        self.stage_5_2 = make_block_stage2(185, n_joints + 1)
+        self.stage_6_2 = make_block_stage2(185, n_joints + 1)
 
     def forward(self, x):
         vgg_out = self.vgg(x)
-        
+#        print(f'vgg_out: {vgg_out.shape}')
         out1_1 = self.stage_1_1(vgg_out)
         out1_2 = self.stage_1_2(vgg_out)
         out2 = torch.cat([out1_1, out1_2, vgg_out], 1)
-
+#        print(f'out1_1: {out1_1.shape}; out1_2: {out1_2.shape}')
         out2_1 = self.stage_2_1(out2)
         out2_2 = self.stage_2_2(out2)
         out3 = torch.cat([out2_1, out2_2, vgg_out], 1)
@@ -96,7 +96,8 @@ class StanceNet(nn.Module):
 
         out6_1 = self.stage_6_1(out6)
         out6_2 = self.stage_6_2(out6)
-
+        
+        # 1 is PAF, 2 is Conf map
         return out6_1, out6_2
     
 #model = StanceNet(19, 38)

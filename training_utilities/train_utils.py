@@ -11,7 +11,7 @@ import os
 import numpy as np
 
 from models.full_model import OpenPoseModel
-from models.paf_model import StanceNet
+from models.paf_model_v2 import StanceNet
 
 import utilities.helper as helper
 import utilities.constants as constants
@@ -61,21 +61,25 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         
         # Perform a forward pass through the model
         outputs = model(images)
+        
+        loss = criterion_paf(mask * outputs[0], mask * pafs)
+        loss += criterion_conf(mask * outputs[1], mask * conf_maps)
+        
         # Outputs is a dictionary with 5 keys for each stage. Keys are 1, 2, 3, 4 and 5.
         # Each key has another dictionary. Each sub-dictionary has 2 keys:
         # 'paf' or 'conf' for storing output of respective stage.
         
         # Define loss for both conf and paf individually. They will be equal to
         # sum of losses of all stages.
-        loss_conf_total = 0
-        loss_paf_total = 0
-        for i in range(3): # Three stages: 1, 2 and 3
-            conf_out = outputs[i]['conf']
-            paf_out = outputs[i]['paf']
-            loss_conf_total += criterion(mask * conf_out, mask * conf_maps)
-            loss_paf_total += criterion(mask *paf_out, mask * pafs)
+#        loss_conf_total = 0
+#        loss_paf_total = 0
+#        for i in range(3): # Three stages: 1, 2 and 3
+#            conf_out = outputs[i]['conf']
+#            paf_out = outputs[i]['paf']
+#            loss_conf_total += criterion(mask * conf_out, mask * conf_maps)
+#            loss_paf_total += criterion(mask *paf_out, mask * pafs)
         # Calculate the total loss for both the outputs: PAF and Conf map.
-        loss = loss_conf_total + loss_paf_total
+#        loss = loss_conf_total + loss_paf_total
         # Set grads to zero to prevent accumulation.
         optimizer.zero_grad()
         # Calculate the grads of all the parameters with respect to loss.
@@ -127,7 +131,7 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
 #    model = OpenPoseModel(num_joints = constants.num_joints,
 #                          num_limbs=constants.num_limbs).to(device)
     model = StanceNet(n_joints=constants.num_joints,
-                      n_limbs = constants.num_limbs*2, n_stages=3).to(device)
+                      n_limbs = constants.num_limbs*2).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     criterion_conf = torch.nn.MSELoss()
     criterion_paf = torch.nn.MSELoss()
