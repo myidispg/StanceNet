@@ -70,7 +70,6 @@ def add_neck_joint(keypoints):
         if keypoints[list_][(6*3) + 2] != 0 and keypoints[list_][(5*3) + 2] != 0:
             neck_x = (keypoints[list_][6*3] + keypoints[list_][5*3]) // 2
             neck_y = (keypoints[list_][(6*3) + 1] + keypoints[list_][(5*3) + 1]) // 2
-    #        print(f'x: {neck_x}, y: {neck_y}')
             keypoints[list_].append(neck_x) 
             keypoints[list_].append(neck_y)
             keypoints[list_].append(2)

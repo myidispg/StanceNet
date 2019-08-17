@@ -20,7 +20,7 @@ def criterion(prediction, label):
     sum = torch.sum((prediction - label)**2)
     return sum
 
-def train_epoch(model, criterion_conf, criterion_paf, optimizer, 
+def train_epoch(model, criterion_conf, criterion_paf, optimizer, scheduler,
                 dataloader, losses, device, print_every=5000):
     """
     This method trains the model for a single epoch.
@@ -29,6 +29,9 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         criterion_conf: The criterion for confidence maps
         criterion_paf: The criterion for Parts Affinity Fields
         optimizer: The optimizer instance used for updating the model weights.
+        scheduler: This is the PyTorch LR Scheduler object to update the LR.
+            Reducing LR is necessary after each epoch because the network then 
+            takes large steps and the losses increses and decreses erratically.
         dataloader: The dataloader with the custom Dataset.
         losses: A list in which to append the losses. 
             They will be used for plotting purposes.
@@ -86,6 +89,8 @@ def train_epoch(model, criterion_conf, criterion_paf, optimizer,
         loss.backward()
         # Take an optimization step.
         optimizer.step()
+        # Take the scheduler step.
+        scheduler.step()
         # Add to running_loss
         running_loss += loss.item()
         # Append losses to the optimizer dictionary.
@@ -135,6 +140,8 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     criterion_conf = torch.nn.MSELoss()
     criterion_paf = torch.nn.MSELoss()
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1,
+                                                gamma = 0.1)
     
     latest_epoch = 1
     
@@ -165,8 +172,8 @@ def train(dataloader, device, num_epochs=5, val_every=False, print_every=5000,
         epoch_losses = []
         model, optimizer, epoch_losses = train_epoch(model, criterion_conf,
                                                      criterion_paf, optimizer,
-                                                     dataloader, epoch_losses,
-                                                     device,
+                                                     scheduler, dataloader,
+                                                     epoch_losses, device,
                                                      print_every=print_every)
         losses.append(epoch_losses)
         print('Saving model after this epoch now.')

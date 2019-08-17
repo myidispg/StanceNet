@@ -6,28 +6,11 @@ Created on Tue Aug 13 16:59:52 2019
 """
 
 import torch
-import math
 import torch.nn as nn
 
 from models.vgg_model import VGGFeatureExtractor
-from models.bodypose_model import bodypose_model
+from models.helper import make_block, init
 
-def init(model):
-    for m in model.modules():
-        if isinstance(m, nn.Conv2d):
-            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            m.weight.data.normal_(0, math.sqrt(2. / n))
-        elif isinstance(m, nn.BatchNorm2d):
-            m.weight.data.fill_(1)
-            m.bias.data.zero_()
-
-def make_block(features_in, features_out, kernel, stride=1, padding=1, relu=True):
-    layers = []
-    layers += [nn.Conv2d(features_in, features_out, kernel, stride, padding)]
-    if relu:
-        layers += [nn.ReLU(inplace=True)]
-
-    return nn.Sequential(*layers)
 
 def make_block_stage1(inp_feats, output_feats):
     layers = [make_block(inp_feats, 128, 3),

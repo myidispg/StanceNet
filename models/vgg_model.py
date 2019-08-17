@@ -8,7 +8,7 @@ Created on Sun Jul 14 15:04:52 2019
 #import torch
 import torch.nn as nn
 import torchvision.models as models
-from models.helper import init, make_standard_block
+from models.helper import init, make_block
 
 # Extract the first 10 layers of the VGG-19 model.
 class VGGFeatureExtractor(nn.Module):
@@ -21,8 +21,8 @@ class VGGFeatureExtractor(nn.Module):
             vgg = models.vgg19_bn(pretrained=True)
             layers_to_use = list(list(vgg.children())[0].children())[:33]
         self.vgg = nn.Sequential(*layers_to_use)
-        self.feature_extractor = nn.Sequential(make_standard_block(512, 256, 3),
-                                               make_standard_block(256, 128, 3))
+        self.feature_extractor = nn.Sequential(make_block(512, 256, 3),
+                                               make_block(256, 128, 3))
         init(self.feature_extractor)
 
     def forward(self, x):

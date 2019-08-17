@@ -7,11 +7,6 @@ Created on Tue Jul  9 14:41:36 2019
 
 import os
 
-im_height = 368
-im_width = 368
-im_height_small = 92
-im_width_small = 92
-
 img_size = 400 # All the images will be resized to this size. PAFs, mask etc. will be adjusted accordingly.
 
 # IMAGE NET CONSTANTS
@@ -24,7 +19,7 @@ num_joints = 18
 num_limbs = 19
 
 # Used in creating confidence maps.
-sigma = 1500
+threshold = 0.1
 
 dataset_dir = os.path.join(os.getcwd(), 'Coco_Dataset')
 model_path = os.path.join(os.getcwd(), 'trained_models')

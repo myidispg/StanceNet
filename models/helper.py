@@ -18,11 +18,12 @@ def init(model):
             m.weight.data.fill_(1)
             m.bias.data.zero_()
 
-
-def make_standard_block(feat_in, feat_out, kernel, stride=1, padding=1):
+def make_block(features_in, features_out, kernel, stride=1, padding=1, relu=True):
     layers = []
-    layers += [nn.Conv2d(feat_in, feat_out, kernel, stride, padding)]
-    layers += [nn.ReLU(inplace=True)]
+    layers += [nn.Conv2d(features_in, features_out, kernel, stride, padding)]
+    if relu:
+        layers += [nn.ReLU(inplace=True)]
+
     return nn.Sequential(*layers)
 
 #def make_standard_block(feat_in, feat_out, kernel, stride=1, padding=1, use_bn=False):
