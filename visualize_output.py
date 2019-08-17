@@ -25,7 +25,7 @@ model.load_state_dict(torch.load('trained_model.pth'))
 model = model.to(device)
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('many_people.jpeg')
+orig_img = cv2.imread('batman.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -184,6 +184,7 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
     """
     
     connected_limbs = []
+    candidates = []
     
     limb_intermed_coords = np.empty((4, num_inter_pts), dtype=np.int)
     for limb_type in range(len(BODY_PARTS)):
@@ -195,6 +196,7 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
             # No limbs of this type found. For example if no left knee or no left waist
             # found, then there is no limb connection possible.
             connected_limbs.append([])
+            candidates.append([])
         else: 
             connection_candidates = []
             # Specify the paf index that contains the x-coord of the paf for
@@ -216,33 +218,52 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     
                     # Get intermediate points between the source and dest
                     # For x coordinate
-                    limb_intermed_coords[1, :] = np.round(np.linspace(
-                            joint_src[0], joint_dest[0], num=num_inter_pts))
-                    # For y coordinate
                     limb_intermed_coords[0, :] = np.round(np.linspace(
-                            joint_src[1], joint_dest[1], num=num_inter_pts))
+                            x_src, x_dest, num=num_inter_pts))
+                    # For y coordinate
+                    limb_intermed_coords[1, :] = np.round(np.linspace(
+                            y_src, y_dest, num=num_inter_pts))
 #                    print(f'index 2: {limb_intermed_coords[2]}')
 #                    print(f'index 3: {limb_intermed_coords[3]}')
 #                    print(limb_intermed_coords)
                     # Get all the intermediate points
-                    intermed_paf = upsampled_paf[limb_intermed_coords[0,: ],
-                                                 limb_intermed_coords[1,:],
+                    intermed_paf = upsampled_paf[limb_intermed_coords[1,: ],
+                                                 limb_intermed_coords[0,:],
                                                  limb_intermed_coords[2:4, :]
                                                  ].transpose()
                     score_intermed_points = intermed_paf.dot(limb_dir)
                     score_penalizing_long_dist = score_intermed_points.mean() + min(0.5 * upsampled_paf.shape[0] / limb_dist - 1, 0)
                     
-                    # Append to connection candidates
-                    connection_candidates.append([joint_src[3], joint_dest[3], score_penalizing_long_dist])
                     
+                    connection_candidates.append([joint_src[3], joint_dest[3],
+                                                      score_penalizing_long_dist,
+                                                      (x_src, y_src),
+                                                      (x_dest, y_dest)])
+                    
+#                    # Criterion 1: At least 80% of the intermediate points have
+#                    # a score higher than 0.05
+#                    criterion1 = (np.count_nonzero(
+#                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
+#                    # Criterion 2: Mean score, penalized for large limb
+#                    # distances (larger than half the image height), is
+#                    # positive
+#                    criterion2 = (score_penalizing_long_dist > 0)
+#                    
+#                    if criterion1 and criterion2:
+#                        # Append to connection candidates
+#                        connection_candidates.append([joint_src[3], joint_dest[3],
+#                                                      score_penalizing_long_dist,
+#                                                      (x_src, y_src),
+#                                                      (x_dest, y_dest)])
+#                    
             # Sort the connections based on their score_penalizing_long_distance
             # Key is used to specify which element to consider while sorting.
             connection_candidates = sorted(connection_candidates, key=lambda x: x[2],
                                            reverse=True) # Reverse to use descending order.
-            
+            candidates.append(connection_candidates)
             # Create an empty array to store connections.
             # We will add more using numpy.vstack
-            connections = np.empty((0, 3)) 
+            connections = np.empty((0, 5)) 
             # See how many connections are possible. 
             # There can be only 1 connection if only 1 neck is found but 5 noses are found.
             max_connections = min(len(joints_dest), len(joints_src))
@@ -256,12 +277,24 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     break
             connected_limbs.append(connections)
         
-    return connected_limbs
+    return connected_limbs, candidates
     
 # We need the PAF's upsampled to the to original image resolution.
 paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
 
-connected_limbs = get_connected_joints(paf_upsampled, joints_list)
+connected_limbs, candidates = get_connected_joints(paf_upsampled, joints_list)
+
+# Visualize the limbs
+for limb_type in connected_limbs:
+    for limb in limb_type:
+        src, dest = limb[3], limb[4]
+        cv2.line(orig_img, src, dest, (0, 255, 0), 2)
+    
+cv2.imshow('img', orig_img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+cv2.imwrite('batman_with_keypoints.png', orig_img)
 
 num_intermed_points = 10
 
@@ -339,3 +372,5 @@ else:
         if len(connections) > max_connections:
             break
     connected_limbs.append(connections)
+    
+
