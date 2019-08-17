@@ -46,8 +46,42 @@ joint_map_coco = [(0, 0), (17, 1), (6, 2), (8, 3), (10, 4), (5, 5), (7, 6),
 #                         (8,10), (7,13), (6,12), (13,15), (12,14), (15,17),
 #                         (14, 16), (13, 12)]
 
-skeleton_limb_indices = [(1, 8), (8, 9), (9, 10), (1, 11), (11, 12), (12, 13), 
-                         (1, 2), (2, 3), (3, 4), (2, 16),  (1, 5), (5, 6),
-                         (6, 7), (5, 17), (1, 0), (0, 14), (0, 15), (14, 16),
-                         (15, 17)]
+skeleton_limb_indices = [(1, 8), # Neck - right waist
+                         (8, 9), # Right waist - right knee
+                         (9, 10), # Right knee - right foot
+                         (1, 11), # Neck - left waist
+                         (11, 12), # Left waist - left knee
+                         (12, 13), # left knee - left foot
+                         (1, 2), # neck - right shoulder
+                         (2, 3), # Right shoulder - left elbow
+                         (3, 4), # Right elbow - left arm
+                         (2, 16), # Right shoulder - right ear
+                         (1, 5), # neck - left shoulder
+                         (5, 6), # left shoulder - left elbow
+                         (6, 7), # left elbow - left arm
+                         (5, 17), # left shoulder - left ear
+                         (1, 0), # neck - nose
+                         (0, 14), # nose - right eye
+                         (0, 15), # nose - left eye
+                         (14, 16), # right eye - right ear
+                         (15, 17)] # left eye - left ear
+
+# These are indices without the shoulder ear connections. Used while inferencing
+BODY_PARTS = [(1, 8), # Neck - right waist
+              (8, 9), # Right waist - right knee
+              (9, 10), # Right knee - right foot
+              (1, 11), # Neck - left waist
+              (11, 12), # Left waist - left knee
+              (12, 13), # left knee - left foot
+              (1, 2), # neck - right shoulder
+              (2, 3), # Right shoulder - left elbow
+              (3, 4), # Right elbow - left arm
+              (1, 5), # neck - left shoulder
+              (5, 6), # left shoulder - left elbow
+              (6, 7), # left elbow - left arm
+              (1, 0), # neck - nose
+              (0, 14), # nose - right eye
+              (0, 15), # nose - left eye
+              (14, 16), # right eye - right ear
+              (15, 17)] # left eye - left ear
 

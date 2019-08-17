@@ -9,14 +9,13 @@ import torch
 
 import numpy as np
 import cv2
-import os
 
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure
 
 #from models.full_model import OpenPoseModel
 from models.paf_model_v2 import StanceNet
-from utilities.constants import MEAN, STD, threshold
+from utilities.constants import threshold, BODY_PARTS
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
@@ -26,11 +25,11 @@ model.load_state_dict(torch.load('trained_model.pth'))
 model = model.to(device)
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-img = cv2.imread('market.jpg')/255
-#img = cv2.imread(os.path.join('Coco_Dataset', 'train2017', '000000000036.jpg'))
-#img = ((img/255)-MEAN)/STD
+orig_img = cv2.imread('many_people.jpeg')
+orig_img_shape = orig_img.shape
+img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
-cv2.imshow('image', img)
+cv2.imshow('image', orig_img)
 cv2.waitKey()
 cv2.destroyAllWindows()
 
@@ -48,7 +47,7 @@ conf = conf.cpu().detach().numpy()
 conf = np.squeeze(conf.transpose(2, 3, 1, 0))
 paf = np.squeeze(paf.transpose(2, 3, 1, 0))
 
-paf = paf.reshape(paf.shape[0], paf.shape[1], -1, 2)
+paf = paf.reshape(paf.shape[0], paf.shape[1], 2, -1)
 
 #for i in range(conf.shape[2]):
 #    conf_map = cv2.resize(conf[:, :, i], (400, 400))
@@ -101,32 +100,13 @@ paf = paf.reshape(paf.shape[0], paf.shape[1], -1, 2)
 #cv2.destroyAllWindows()
 
 #---------This section is to find the peaks in the confidence maps
-def find_resized_coordinates(coords, resizeFactor):
-    """
-    Computes resized coordinated to upscale the coordinates to the size of images.
-    Inputs:
-        coords: A tuple of x and y
-        resizeFactor: the factor by which to resize. 
-        It is a tuple for different axises. (x_scale, y_scale)
-    Outputs:
-        returns a tuple of the resized coordinates. (X, Y)
-    """
-    x, y = coords[0] + 0.5, coords[1] + 0.5
-    x, y = x * resizeFactor[0], y * resizeFactor[1]
-#    x, y = coords[0] * resizeFactor[0], coords[1] * resizeFactor[1]
-    
-    return (x - 0.5, y - 0.5)
-#    return (x, y)
-    
-def find_joint_peaks(heatmap, upsampleScale, threshold):
+def find_joint_peaks(heatmap, orig_img_shape, threshold):
     """
     Given a heatmap, find the peaks of the detected joints with 
     confidence score > threshold.
     Inputs:
         heatmap: The heatmaps for all the joints. It is of shape: h, w, num_joints.
-        upsampleScale: The scale by which to increase the coordinates. 
-            The heatmap is of low size and the image is of larger size.
-            Again a tuple for both the axises.
+        orig_img_shape: The shape of the original image: (x, y, num_channels)
         threshold: The minimum score for each joint
     Output:
         A list of the detected joints. There is a sublist for each joint 
@@ -136,93 +116,226 @@ def find_joint_peaks(heatmap, upsampleScale, threshold):
         are 3 nose detected (joint type 0), then there will be 3 tuples in the 
         nose sublist            
     """
-    
-    win_size = 2 # the window size used to smoothen the peaks.
-    
     joints_list = list()
-    counter = 0 # This will serve as a unique id for all the detected joints.
+    counter = 0 # This will serve as unique id for all joints
+    heatmap = cv2.resize(heatmap, (orig_img_shape[1], orig_img_shape[0]),
+                                    interpolation=cv2.INTER_CUBIC)
     for i in range(heatmap.shape[2]-1):
         sub_list = list()
-        joint_map = heatmap[:, :, i] # the heatmap for a particular joint type.
-        # Threshold the joint_map
-        joint_map = np.where(joint_map > threshold, joint_map, 0)
-        # Apply a convolution kind of operation and replace each pixel in a 
-        # 5x5 window with the maximum of the pixels in that window.
-        filter_ = maximum_filter(joint_map, footprint=np.ones((3, 3)))
-        # Now, we compare the original joint_map with the convolved filter_
-        # This will give us all the locations where the peaks remained at same location.
-        mask = filter_ == joint_map
-        # Apply the mask so that only peaks remain. All other are 0.
-        joint_map *= mask
-        # Get the x and y of all the peaks
-        x_indices, y_indices = np.where(joint_map != 0)
-        # Now, we can create tuples and append to the sublist
-        for j in range(len(x_indices)):
-            x_index, y_index = x_indices[j], y_indices[j]
-            confidence = joint_map[x_index, y_index]
-            
-            # Refine the center of the heatmap.
-            # Taken from here:
-            #https://github.com/NiteshBharadwaj/part-affinity/blob/0f49c6804f75b2153e0fa3c9ae07d73c200d4717/src/evaluation/post.py#L115
-#            x_min, y_min = np.maximum(0, x_index - win_size), np.maximum(0, y_index - win_size)
-#            x_max, y_max = np.maximum(conf.shape[0] - 1, x_index + win_size), np.maximum(conf.shape[1] - 1, y_index + win_size)
-#            
-#            # Take a small path around the peak and only upsample that region.
-#            patch = joint_map[y_min:y_max + 1, x_min:x_max + 1]
-#            map_upsamp = cv2.resize(
-#                    patch, None, fx=upsampleScale[0], fy=upsampleScale[1], interpolation=cv2.INTER_CUBIC)
-#            
-#            location_of_max = np.unravel_index(
-#                    map_upsamp.argmax(), map_upsamp.shape)
-#            print(f'location of max: {location_of_max}')
-#            print(f'xindex, yindex: {(x_index, y_index)}')
-#            
-#            location_of_patch_center = find_resized_coordinates((x_index-x_min, y_index-y_min), upsampleScale)
-#            print(f'loc patch center: {location_of_patch_center}')
-#            
-#            refined_center = (location_of_max[0] - location_of_patch_center[0], 
-#                              location_of_max[1] - location_of_patch_center[1])
-#            print(refined_center)
-#            confidence = map_upsamp[location_of_max]
-#            print(f'confidence: {confidence}')
-#            
-#            x_index, y_index = find_resized_coordinates((x_index, y_index), upsampleScale)
-#            x_index, y_index = x_index + refined_center[0], y_index + refined_center[1]
-#            sub_list.append((x_index, y_index, confidence, counter))
-#           Compute the resize factor for both the axises.
-#            x_resize, y_resize = orig_shape[0] / conf.shape[0], orig_shape[1] / conf.shape[1]
-            x_index, y_index = find_resized_coordinates((x_index, y_index), 
-                                                        upsampleScale)
-#            x_index, y_index = x_index, y_index
-            sub_list.append((x_index, y_index, confidence, counter))
+        joint_map = heatmap[:, :, i] # the heatmap for the particular joint type
+        # Smoothen the heatmap
+        joint_map = gaussian_filter(joint_map, sigma=3)
+        map_left = np.zeros(joint_map.shape)
+        map_left[1:, :] = joint_map[:-1, :]
+        map_right = np.zeros(joint_map.shape)
+        map_right[:-1, :] = joint_map[1:, :]
+        map_up = np.zeros(joint_map.shape)
+        map_up[:, 1:] = joint_map[:, :-1]
+        map_down = np.zeros(joint_map.shape)
+        map_down[:, :-1] = joint_map[:, 1:]
+        
+        peaks_binary = np.logical_and.reduce((joint_map >= map_left,
+                                              joint_map >= map_right,
+                                              joint_map >= map_up,
+                                              joint_map >= map_down,
+                                              joint_map > threshold))
+        x_index, y_index = np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0]
+#        print(joint_map.shape)
+#        print(type(confidence))
+        for x, y in zip(x_index, y_index):
+            confidence = joint_map[y, x]
+            sub_list.append((x, y, confidence, counter))
             counter += 1
-            
+        
         joints_list.append(sub_list)
+    return joints_list
+                
+joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
+        
 
-    return joints_list    
-
-joints_list = find_joint_peaks(conf, (8, 8), threshold)
-    
-#test = np.where(conf[:, :, 0] > 0.09, conf[:, :, 0], 0)
-#
-#filter_ = maximum_filter(test, footprint=np.ones((3, 3)))
-#mask = filter_ == test
-#test *= mask
-## 14, 14 and 9, 31
-#x_index, y_index = np.where(test != 0)
-#
-# Given the found joints_list, draw on the images
-img = np.squeeze(img.cpu().detach().numpy())
-img = img.transpose(1, 2, 0)
-img = img.copy()
-#orig_img = cv2.resize(orig_img, (400, 400))
 for joint_type in joints_list:
     for tuple_ in joint_type:
-        x_index = int(tuple_[0])
-        y_index = int(tuple_[1])
-        print(x_index, y_index)
-        cv2.circle(img, (y_index, x_index), 3, (255, 0, 0))
+        x_index = tuple_[0]
+        y_index = tuple_[1]
+        cv2.circle(orig_img, (x_index, y_index), 3, (255, 0, 0))
         
-cv2.imshow('img', img)
+cv2.imshow('img', orig_img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+# -------Now, we can use the PAFs to connect joints.------
+for i in range(paf.shape[3]):
+    map_ = paf[:, :, 0, i] + paf[:, :, 1, i]
+    cv2.imshow('paf', cv2.resize(map_*255, (400, 400)))
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
+    """
+    For every type of limb (eg: forearm, shin, etc.), look for every potential
+    pair of joints (eg: every wrist-elbow combination) and evaluate the PAFs to
+    determine which pairs are indeed body limbs.
+    Inputs:
+        upsampled_paf: PAFs upsampled to the original image size.
+        joints_list: The ist of joints made by the find_joints_peaks()
+        num_inter_pts: The number of points to consider to integrate the PAFs
+            and give score to connection candidate
+    """
+    
+    connected_limbs = []
+    
+    limb_intermed_coords = np.empty((4, num_inter_pts), dtype=np.int)
+    for limb_type in range(len(BODY_PARTS)):
+        # List of all joints of source
+        joints_src = joints_list[BODY_PARTS[limb_type][0]]
+        # List of all joints of destination
+        joints_dest = joints_list[BODY_PARTS[limb_type][1]]
+        if len(joints_src) == 0 or len(joints_dest) == 0:
+            # No limbs of this type found. For example if no left knee or no left waist
+            # found, then there is no limb connection possible.
+            connected_limbs.append([])
+        else: 
+            connection_candidates = []
+            # Specify the paf index that contains the x-coord of the paf for
+            # this limb
+            limb_intermed_coords[2, :] = 2*limb_type
+            # And the y-coord paf index
+            limb_intermed_coords[3, :] = 2*limb_type + 1
+            
+            for i, joint_src in enumerate(joints_src):
+                for j, joint_dest in enumerate(joints_dest):
+                    # Subtract the position of both joints to obtain the
+                    # direction of the potential limb
+                    x_src, y_src = joint_src[0], joint_src[1]
+                    x_dest, y_dest = joint_dest[0], joint_dest[1]
+                    limb_dir = np.asarray([x_dest - x_src, y_dest - y_src])
+                    # Compute the norm of the potential limb
+                    limb_dist = np.sqrt(np.sum(limb_dir ** 2)) + 1e-8
+                    limb_dir = limb_dir / limb_dist  # Normalize limb_dir to be a unit vector
+                    
+                    # Get intermediate points between the source and dest
+                    # For x coordinate
+                    limb_intermed_coords[1, :] = np.round(np.linspace(
+                            joint_src[0], joint_dest[0], num=num_inter_pts))
+                    # For y coordinate
+                    limb_intermed_coords[0, :] = np.round(np.linspace(
+                            joint_src[1], joint_dest[1], num=num_inter_pts))
+#                    print(f'index 2: {limb_intermed_coords[2]}')
+#                    print(f'index 3: {limb_intermed_coords[3]}')
+#                    print(limb_intermed_coords)
+                    # Get all the intermediate points
+                    intermed_paf = upsampled_paf[limb_intermed_coords[0,: ],
+                                                 limb_intermed_coords[1,:],
+                                                 limb_intermed_coords[2:4, :]
+                                                 ].transpose()
+                    score_intermed_points = intermed_paf.dot(limb_dir)
+                    score_penalizing_long_dist = score_intermed_points.mean() + min(0.5 * upsampled_paf.shape[0] / limb_dist - 1, 0)
+                    
+                    # Append to connection candidates
+                    connection_candidates.append([joint_src[3], joint_dest[3], score_penalizing_long_dist])
+                    
+            # Sort the connections based on their score_penalizing_long_distance
+            # Key is used to specify which element to consider while sorting.
+            connection_candidates = sorted(connection_candidates, key=lambda x: x[2],
+                                           reverse=True) # Reverse to use descending order.
+            
+            # Create an empty array to store connections.
+            # We will add more using numpy.vstack
+            connections = np.empty((0, 3)) 
+            # See how many connections are possible. 
+            # There can be only 1 connection if only 1 neck is found but 5 noses are found.
+            max_connections = min(len(joints_dest), len(joints_src))
+            # Go over all potential candidates that are already sorted.
+            for potentail_connections in connection_candidates:
+                src_id, dest_id = potentail_connections[:2]
+                # Check that neither src nor destination have already been connected.
+                if src_id not in connections and dest_id not in connections:
+                    connections = np.vstack([connections, potentail_connections])
+                if len(connections) > max_connections:
+                    break
+            connected_limbs.append(connections)
+        
+    return connected_limbs
+    
+# We need the PAF's upsampled to the to original image resolution.
+paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
+
+connected_limbs = get_connected_joints(paf_upsampled, joints_list)
+
+num_intermed_points = 10
+
+connected_limbs = []
+
+limb_intermed_coords = np.empty((4, num_intermed_points), dtype=np.int)
+
+# Added by me
+limb_type = 6
+
+# List of all joints of source
+joints_src = joints_list[BODY_PARTS[limb_type][0]]
+# List of all joints of destination
+joints_dest = joints_list[BODY_PARTS[limb_type][1]]
+if len(joints_src) == 0 or len(joints_dest) == 0:
+    # No limbs of this type found. For example if no left knee or no left waist
+    # found, then there is no limb connection possible.
+    connected_limbs.append[0]
+else: 
+    connection_candidates = []
+    # Specify the paf index that contains the x-coord of the paf for
+    # this limb
+    limb_intermed_coords[2, :] = 2*limb_type
+    # And the y-coord paf index
+    limb_intermed_coords[3, :] = 2*limb_type + 1
+    
+    for i, joint_src in enumerate(joints_src):
+        for j, joint_dest in enumerate(joints_dest):
+            # Subtract the position of both joints to obtain the
+            # direction of the potential limb
+            x_src, y_src = joint_src[0], joint_src[1]
+            x_dest, y_dest = joint_dest[0], joint_dest[1]
+#            confidence
+#            joint_src = np.asarray([x_src, y_src])
+#            joint_dest = np.asarray([x_dest, y_dest])
+            limb_dir = np.asarray([x_dest - x_src, y_dest - y_src])
+            # Compute the norm of the potential limb
+            limb_dist = np.sqrt(np.sum(limb_dir ** 2)) + 1e-8
+            limb_dir = limb_dir / limb_dist  # Normalize limb_dir to be a unit vector
+            
+            # Get intermediate points between the source and dest
+            # For x coordinate
+            limb_intermed_coords[0, :] = np.round(np.linspace(
+                    joint_src[0], joint_dest[0], num=num_intermed_points))
+            # For y coordinate
+            limb_intermed_coords[1, :] = np.round(np.linspace(
+                    joint_src[1], joint_dest[1], num=num_intermed_points))
+            # Get all the intermediate points
+            intermed_paf = paf_copy[limb_intermed_coords[0,: ],
+                                    limb_intermed_coords[1,:],
+                                    limb_intermed_coords[2:4, :]].transpose()
+            score_intermed_points = intermed_paf.dot(limb_dir)
+            score_penalizing_long_dist = score_intermed_points.mean() + min(0.5 * paf_copy.shape[0] / limb_dist - 1, 0)
+            
+            # Append to connection candidates
+            connection_candidates.append([joint_src[3], joint_dest[3], score_penalizing_long_dist])
+            
+    # Sort the connections based on their score_penalizing_long_distance
+    # Key is used to specify which element to consider while sorting.
+    connection_candidates = sorted(connection_candidates, key=lambda x: x[2],
+                                   reverse=True) # Reverse to use descending order.
+    
+    # Create an empty array to store connections.
+    # We will add more using numpy.vstack
+    connections = np.empty((0, 3)) 
+    # See how many connections are possible. 
+    # There can be only 1 connection if only 1 neck is found but 5 noses are found.
+    max_connections = min(len(joints_dest), len(joints_src))
+    # Go over all potential candidates that are already sorted.
+    for potentail_connections in connection_candidates:
+        src_id, dest_id = potentail_connections[:2]
+        # Check that neither src nor destination have already been connected.
+        if src_id not in connections and dest_id not in connections:
+            connections = np.vstack([connections, potentail_connections])
+        if len(connections) > max_connections:
+            break
+    connected_limbs.append(connections)
