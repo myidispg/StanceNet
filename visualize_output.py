@@ -9,23 +9,22 @@ import torch
 
 import numpy as np
 import cv2
+import sys
 
-from scipy.ndimage.filters import gaussian_filter, maximum_filter
-from scipy.ndimage.morphology import generate_binary_structure
+from scipy.ndimage.filters import gaussian_filter
 
-#from models.full_model import OpenPoseModel
 from models.paf_model_v2 import StanceNet
 from utilities.constants import threshold, BODY_PARTS
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
 #model = OpenPoseModel(15, 17).to(device).eval()
-model = StanceNet(18, 38,).eval()
+model = StanceNet(18, 38).eval()
 model.load_state_dict(torch.load('trained_models/trained_model.pth'))
 model = model.to(device)
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/trinity.jpg')
+orig_img = cv2.imread('test_images/thanos_moon.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -88,14 +87,6 @@ def find_joint_peaks(heatmap, orig_img_shape, threshold):
                                               joint_map >= map_down,
                                               joint_map > threshold))
         x_index, y_index = np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0]
-#        peaks = list(zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0]))
-#        peaks_with_score = [x + (joint_map[x[1], x[0]],) for x in peaks]
-#        peak_id = range(counter, counter + len(peaks))
-#        peaks_with_score_and_id = [peaks_with_score[i] + (peak_id[i],) for i in range(len(peak_id))]
-#        joints_list.append(peaks_with_score_and_id)
-#        return peaks, peaks_with_score, peak_id, peaks_with_score_and_id
-#        print(joint_map.shape)
-#        print(type(confidence))
         for x, y in zip(x_index, y_index):
             confidence = joint_map[y, x]
             sub_list.append((x, y, confidence, counter))
@@ -104,7 +95,6 @@ def find_joint_peaks(heatmap, orig_img_shape, threshold):
         joints_list.append(sub_list)
     return joints_list
        
-#peaks, peaks_with_score, peak_id, peaks_with_score_and_id = find_joint_peaks(conf, orig_img_shape, threshold)
 joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
         
 
@@ -118,19 +108,15 @@ cv2.imshow('img', orig_img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-cv2.imwrite('person_keypoints.png', orig_img)
-
-#cv2.imwrite('batman_with_keypoints.png', orig_img)
-
 # -------Now, we can use the PAFs to connect joints.------
-for i in range(len(BODY_PARTS)):
-    paf_index = [i*2, i*2+1] # get the indices of the pafs.
-    paf_limb = paf[:, :, paf_index[0]: paf_index[1]+1] # get the corresponding heatmaps.
-    map_ = paf_limb[:, :, 0] + paf_limb[:, :, 1]
-    map_ = np.where(map_ > 0.1, map_, 0)
-    cv2.imshow('paf', cv2.resize(map_*255, (400, 400)))
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+#for i in range(len(BODY_PARTS)):
+#    paf_index = [i*2, i*2+1] # get the indices of the pafs.
+#    paf_limb = paf[:, :, paf_index[0]: paf_index[1]+1] # get the corresponding heatmaps.
+#    map_ = paf_limb[:, :, 0] + paf_limb[:, :, 1]
+#    map_ = np.where(map_ > 0.1, map_, 0)
+#    cv2.imshow('paf', cv2.resize(map_*255, (400, 400)))
+#    cv2.waitKey(0)
+#    cv2.destroyAllWindows()
 
 def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
     """
@@ -182,9 +168,6 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     # For y coordinate
                     limb_intermed_coords[1, :] = np.round(np.linspace(
                             y_src, y_dest, num=num_inter_pts))
-#                    print(f'index 2: {limb_intermed_coords[2]}')
-#                    print(f'index 3: {limb_intermed_coords[3]}')
-#                    print(limb_intermed_coords)
                     # Get all the intermediate points
                     intermed_paf = upsampled_paf[limb_intermed_coords[1,: ],
                                                  limb_intermed_coords[0,:],
@@ -193,6 +176,23 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     score_intermed_points = intermed_paf.dot(limb_dir)
                     score_penalizing_long_dist = score_intermed_points.mean() + min(0.5 * upsampled_paf.shape[0] / limb_dist - 1, 0)
                     
+                    # Criterion 1: At least 80% of the intermediate points have
+                    # a score higher than thre2
+#                    criterion1 = (np.count_nonzero(
+#                        score_intermed_points > 0.01) > 0.8 * num_inter_pts)
+#                    # Criterion 2: Mean score, penalized for large limb
+#                    # distances (larger than half the image height), is
+#                    # positive
+#                    criterion2 = (score_penalizing_long_dist > 0)
+#                    if criterion1 and criterion2:
+#                        # Last value is the combined paf(+limb_dist) + heatmap
+#                        # scores of both joints
+#                        connection_candidates.append([joint_src[3], joint_dest[3],
+#                                                      score_penalizing_long_dist,
+#                                                      (x_src, y_src),
+#                                                      (x_dest, y_dest)])
+
+#                    
                     connection_candidates.append([joint_src[3], joint_dest[3],
                                                       score_penalizing_long_dist,
                                                       (x_src, y_src),
@@ -226,7 +226,7 @@ paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
 connected_limbs = get_connected_joints(paf_upsampled, joints_list)
 
 # Visualize the limbs
-for limb_type in connected_limbs:
+for limb_type in connected_limbs:   
     for limb in limb_type:
         src, dest = limb[3], limb[4]
         cv2.line(orig_img, src, dest, (0, 255, 0), 2)
@@ -235,6 +235,64 @@ cv2.imshow('img', orig_img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-cv2.imwrite('person_with_keypoints.png', orig_img)
+# ------ Work on video--------
 
+ERASE_LINE = '\x1b[2K'
+CURSOR_UP_ONE = '\x1b[1A'
 
+vid = cv2.VideoCapture('test_images/action_scene.mp4')
+# Define the codec and create VideoWriter object
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter('output.avi',fourcc, 20.0,
+                      (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                       int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
+total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
+
+print(f'Video file loaded and working on detecting joints.')
+
+frames_processed = 0
+while(vid.isOpened()):
+    print(f'Processed {frames_processed} frames out of {total_frames}')
+    ret, orig_img = vid.read()
+    orig_img_shape = orig_img.shape
+    img = orig_img.copy()/255
+    img = cv2.resize(img, (400, 400))
+    # Convert the frame to a torch tensor
+    img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).permute(0, 3, 1, 2)
+    img = img.to(device).float()
+    # Get the model's output
+    paf, conf = model(img)
+    # Convert back to numpy
+    paf = paf.cpu().detach().numpy()
+    conf = conf.cpu().detach().numpy()
+    # Remove the extra dimension of batch size
+    conf = np.squeeze(conf.transpose(2, 3, 1, 0))
+    paf = np.squeeze(paf.transpose(2, 3, 1, 0))
+
+    # Get the joints
+    joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
+    # Draw joints on the orig_img
+    for joint_type in joints_list:
+        for tuple_ in joint_type:
+            x_index = tuple_[0]
+            y_index = tuple_[1]
+            cv2.circle(orig_img, (x_index, y_index), 3, (255, 0, 0))
+            
+    # Upsample the paf
+    paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
+    # Get the connected limbs
+    connected_limbs = get_connected_joints(paf_upsampled, joints_list)
+    
+    # Draw the limbs too.
+    for limb_type in connected_limbs:   
+        for limb in limb_type:
+            src, dest = limb[3], limb[4]
+            cv2.line(orig_img, src, dest, (0, 255, 0), 2)
+            
+    out.write(orig_img)
+    frames_processed += 1
+    sys.stdout.write(CURSOR_UP_ONE)
+    sys.stdout.write(ERASE_LINE)
+    
+    break

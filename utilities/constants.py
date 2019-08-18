@@ -19,7 +19,7 @@ num_joints = 18
 num_limbs = 19
 
 # Used in creating confidence maps.
-threshold = 0.05
+threshold = 0.1
 
 dataset_dir = os.path.join(os.getcwd(), 'Coco_Dataset')
 model_path = os.path.join(os.getcwd(), 'trained_models')
@@ -32,19 +32,6 @@ model_path = os.path.join(os.getcwd(), 'trained_models')
 joint_map_coco = [(0, 0), (17, 1), (6, 2), (8, 3), (10, 4), (5, 5), (7, 6), 
                    (9, 7), (12, 8), (14, 9), (16, 10), (11, 11), (13, 12),
                    (15, 13), (2, 14), (1, 15), (4, 16), (3, 17)]
-
-#
-#
-#
-#joint_map_coco = [(0, 0), (1, 15), (2, 14), (3, 17), (4, 16), (5, 5), (6, 2), 
-#                  (7, 6), (8, 3), (9, 7), (10, 4), (11, 11), (12, 8), (13, 12), 
-#                  (14, 9), (15, 13), (16, 10), (17, 1)] # 17 is the added neck.
-                    
-
-# The joint pairs to create skeletons.
-#skeleton_limb_indices = [(3,5), (3,2), (2, 4), (7,6), (7,9), (9,11), (6,8),
-#                         (8,10), (7,13), (6,12), (13,15), (12,14), (15,17),
-#                         (14, 16), (13, 12)]
 
 skeleton_limb_indices = [(1, 8), # Neck - right waist
                          (8, 9), # Right waist - right knee

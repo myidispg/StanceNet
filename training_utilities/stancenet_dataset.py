@@ -52,7 +52,6 @@ class StanceNetDataset(Dataset):
         
         # Load the image
         img_name = os.path.join(self.img_dir, get_image_name(img_index))
-#        print(img_name)
         img = cv2.imread(img_name).transpose(1, 0, 2)/255
         original_shape = img.shape[:2]
         # Resize image to 400x400 dimensions.

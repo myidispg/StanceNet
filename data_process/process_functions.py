@@ -154,8 +154,8 @@ def generate_paf(keypoints, sigma=5):
             (batch_size, im_width, im_height, 2, num_joints)
     """
     
-    paf = np.zeros((img_size // transform_scale, img_size // transform_scale, 2,
-                        len(skeleton_limb_indices)), np.float32)
+    paf = np.zeros((img_size // transform_scale, img_size // transform_scale,
+                    len(skeleton_limb_indices), 2), np.float32)
     # For sub list in keypoints
     for list_ in keypoints:
         for limb in range(len(skeleton_limb_indices)):
@@ -192,8 +192,8 @@ def generate_paf(keypoints, sigma=5):
                 mask = cv2.resize(mask, (int(img_size / transform_scale),
                                          int(img_size / transform_scale)),
                                         cv2.INTER_AREA)
-                paf[:, :, 0, limb] += mask * vector[0]
-                paf[:, :, 1, limb] += mask * vector[1]
+                paf[:, :, limb, 0] += mask * vector[0]
+                paf[:, :, limb, 1] += mask * vector[1]
                     
     return paf
                 
