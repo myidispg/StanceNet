@@ -19,7 +19,7 @@ num_joints = 18
 num_limbs = 19
 
 # Used in creating confidence maps.
-threshold = 0.1
+threshold = 0.05
 
 dataset_dir = os.path.join(os.getcwd(), 'Coco_Dataset')
 model_path = os.path.join(os.getcwd(), 'trained_models')
