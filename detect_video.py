@@ -31,19 +31,17 @@ CURSOR_UP_ONE = '\x1b[1A'
 image_path = args.video_path
 
 # If the path has backslashes like in windows, replace with forward slashes
-image_path = image_path.replace('\\', '/')
-image_path = os.path.normpath(image_path)
+video_path = video_path.replace('\\', '/')
+video_path = os.path.normpath(video_path)
 
-image_path = os.path.join(os.getcwd(), image_path)
+video_path = os.path.join(os.getcwd(), video_path)
 
-if os.path.exists(image_path):
+if os.path.exists(video_path):
     pass
 else:
     print('No such path or file exists. Please check.')
     exit()
     
-print('Continuing work on {device.type}. The processed video file will be saved in ' \
-      'project_directory/processed_videos/')
 print('Loading the pre-trained model')
 model = StanceNet(18, 38).eval()
 model.load_state_dict(torch.load('trained_models/trained_model.pth'))
@@ -51,19 +49,20 @@ model = model.to(device)
 print(f'Loading the model complete.')
 
 # now, break the path into components
-path_components = image_path.split('/')
+path_components = video_path.split('/')
 video_name = path_components[-1].split('.')[0]
+extension = path_components[-1].split('.')[1]
 
 try:
     os.mkdir('processed_videos')
 except FileExistsError:
     pass
 
-output_path = os.path.join(os.getcwd(), 'processed_videos', video_name)
-
+output_path = os.path.join(os.getcwd(), 'processed_videos', f'{video_name}_keypoints.{extension}')
+print(f'The processed video file will be saved in: {output_path}')
 
 # Now that we have the video name, start the detection process.
-vid = cv2.VideoCapture(image_path)
+vid = cv2.VideoCapture(video_path)
 
 # Define the codec and create VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
