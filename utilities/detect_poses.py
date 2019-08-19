@@ -1,52 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Aug  1 18:48:23 2019
+Created on Mon Aug 19 17:47:52 2019
 
 @author: myidispg
 """
 
-import torch
-
 import numpy as np
-import cv2
-import sys
-
 from scipy.ndimage.filters import gaussian_filter
+import cv2
 
-from models.paf_model_v2 import StanceNet
-from utilities.constants import threshold, BODY_PARTS
+from utilities.constants import BODY_PARTS
 
-device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
-
-print('Loading the pre-trained model')
-model = StanceNet(18, 38).eval()
-model.load_state_dict(torch.load('trained_models/trained_model.pth'))
-model = model.to(device)
-print(f'Loading the model complete.')
-
-#img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/thanos_moon.jpg')
-orig_img_shape = orig_img.shape
-img = orig_img.copy()/255
-img = cv2.resize(img, (400, 400))
-#cv2.imshow('image', orig_img)
-#cv2.waitKey()
-#cv2.destroyAllWindows()
-
-img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).permute(0, 3, 1, 2)
-
-img = img.to(device).float()
-
-paf, conf = model(img)
-
-paf = paf.cpu().detach().numpy()
-conf = conf.cpu().detach().numpy()
-
-# Remove the extra dimension of batch size
-conf = np.squeeze(conf.transpose(2, 3, 1, 0))
-paf = np.squeeze(paf.transpose(2, 3, 1, 0))
-
-#---------This section is to find the peaks in the confidence maps
 def find_joint_peaks(heatmap, orig_img_shape, threshold):
     """
     Given a heatmap, find the peaks of the detected joints with 
@@ -94,29 +58,7 @@ def find_joint_peaks(heatmap, orig_img_shape, threshold):
         
         joints_list.append(sub_list)
     return joints_list
-
-joints_list = find_joint_peaks(conf, orig_img_shape, threshold)        
-
-for joint_type in joints_list:
-    for tuple_ in joint_type:
-        x_index = tuple_[0]
-        y_index = tuple_[1]
-        cv2.circle(orig_img, (x_index, y_index), 3, (255, 0, 0))
-
-cv2.imshow('img', orig_img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-# -------Now, we can use the PAFs to connect joints.------
-#for i in range(len(BODY_PARTS)):
-#    paf_index = [i*2, i*2+1] # get the indices of the pafs.
-#    paf_limb = paf[:, :, paf_index[0]: paf_index[1]+1] # get the corresponding heatmaps.
-#    map_ = paf_limb[:, :, 0] + paf_limb[:, :, 1]
-#    map_ = np.where(map_ > 0.1, map_, 0)
-#    cv2.imshow('paf', cv2.resize(map_*255, (400, 400)))
-#    cv2.waitKey(0)
-#    cv2.destroyAllWindows()
-
+       
 def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
     """
     For every type of limb (eg: forearm, shin, etc.), look for every potential
@@ -217,92 +159,4 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
             
             connected_limbs.append(connection)
     return connected_limbs
-            
-    
-# We need the PAF's upsampled to the to original image resolution.
-paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
 
-connected_limbs = get_connected_joints(paf_upsampled, joints_list)
-
-# Visualize the limbs
-for limb_type in connected_limbs:   
-    for limb in limb_type:
-        src, dest = limb[3], limb[4]
-        cv2.line(orig_img, src, dest, (0, 255, 0), 2)
-    
-cv2.imshow('img', orig_img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-#def find_people(connected_limbs, joints_list):
-#    """
-#    Takes in the joints and the limbs lists detected in previous step to combine
-#    limbs of a single person into a single list.
-#    """
-#    
-#    people = []
-#    
-#    for limb_type in range(len(BODY_PARTS)):
-        
-        
-
-# ------ Work on video--------
-ERASE_LINE = '\x1b[2K'
-CURSOR_UP_ONE = '\x1b[1A'
-
-vid = cv2.VideoCapture('test_images/action_scene.mp4')
-# Define the codec and create VideoWriter object
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi',fourcc, 20.0,
-                      (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                       int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))))
-
-total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
-
-print(f'Video file loaded and working on detecting joints.')
-
-frames_processed = 0
-while(vid.isOpened()):
-    print(f'Processed {frames_processed} frames out of {total_frames}')
-    ret, orig_img = vid.read()
-    orig_img_shape = orig_img.shape
-    img = orig_img.copy()/255
-    img = cv2.resize(img, (400, 400))
-    # Convert the frame to a torch tensor
-    img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).permute(0, 3, 1, 2)
-    img = img.to(device).float()
-    # Get the model's output
-    paf, conf = model(img)
-    # Convert back to numpy
-    paf = paf.cpu().detach().numpy()
-    conf = conf.cpu().detach().numpy()
-    # Remove the extra dimension of batch size
-    conf = np.squeeze(conf.transpose(2, 3, 1, 0))
-    paf = np.squeeze(paf.transpose(2, 3, 1, 0))
-
-    # Get the joints
-    joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
-    # Draw joints on the orig_img
-    for joint_type in joints_list:
-        for tuple_ in joint_type:
-            x_index = tuple_[0]
-            y_index = tuple_[1]
-            cv2.circle(orig_img, (x_index, y_index), 3, (255, 0, 0))
-            
-    # Upsample the paf
-    paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
-    # Get the connected limbs
-    connected_limbs = get_connected_joints(paf_upsampled, joints_list)
-    
-    # Draw the limbs too.
-    for limb_type in connected_limbs:   
-        for limb in limb_type:
-            src, dest = limb[3], limb[4]
-            cv2.line(orig_img, src, dest, (0, 255, 0), 2)
-            
-    out.write(orig_img)
-    frames_processed += 1
-    sys.stdout.write(CURSOR_UP_ONE)
-    sys.stdout.write(ERASE_LINE)
-    
-    break
