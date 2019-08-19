@@ -17,7 +17,7 @@ To train the model, the dataloader depends upon `pycocotools` which can be insta
 ## The model architecture
 As per the paper, the model uses the first 10 layers of a pre-trained VGG-19 network as feature extractor. It is followed by 6 stages of Parts Affinity Fields and Heatmap generation fields. The stages were reduced to make sure the model could be trained on my hardware. 
 This is one of the reason why the results were not at the level of the original paper.
-![Model Architectue](https://github.com/myidispg/StanceNet/blob/master/readme_media/model_architecture.png")
+![Model Architectue](https://github.com/myidispg/StanceNet/blob/master/readme_media/model_architecture.png)
 
 ## Using the system on a video
 The system can be used to detect the keypoints of a person in all the frames of a video. To use this feature, execute the following command:<br>
@@ -26,7 +26,7 @@ The processed image will be saved to the same path with '_keypoints' appended to
 
 ## Explanation of the system
 The system used Confidence Maps and Parts Affinity Fields to detect the keypoints and limbs in a person. This makes it a bottom up approach and it works well for Multi-Person images too. Also, this makes the running time invariant to the number of people in tha images.<br>
-![Parts and Limbs Skeleton](https://github.com/myidispg/StanceNet/blob/master/readme_media/parts_and_skeleton.png")<br>
+![Parts and Limbs Skeleton](https://github.com/myidispg/StanceNet/blob/master/readme_media/parts_and_skeleton.png)<br>
 **Confidence Maps**: A Confidence Map is a 2D representation of the belief that a particular body part can be located in any given pixel.<br>
 There are J confidence maps for an image where J is the number of body joints that are to be detected. In this case, J=18. The COCO dataset has 17 keypoints, but I added a neck joint midway between the Left and Right shoulder.<br>
 **Parts Affinity Fields**: A Part Affinity Field (PAF) is a set of flow fields that encodes unstructured pairwise relationships between body parts. <br>
