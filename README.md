@@ -9,6 +9,8 @@ This repository holds the code for my implementation of OpenPose paper. This is 
 [People in a market](https://github.com/myidispg/StanceNet/blob/master/results/market.png)
 
 ## Some pre-requisites
+To download the pre-trained model here: [Dropbox download link](https://www.dropbox.com/sh/47zif4g1bg7i9pl/AADYhpFEZQPbtaBzvZOsOd0ra?dl=0)<br>
+**If you want to train the model too, follow the below steps**
 Download the dataset and put the annotations, train and validation images in the Coco_Dataset directory in the repository directory. The file path should be like this:\
 **1: Train images-** `StanceNet/Coco_Dataset/train2017/{images}`\
 **2: Validation images-** `StanceNet/Coco_Dataset/val2017/{images}`\
@@ -42,7 +44,7 @@ I sort all the detected connections on the basis of the connection score. The co
 
 ## Use cases of this system.
 Body Pose Estimations had wide applications in AR, Robotics, Sports, Action Tracking etc.<br>
-**Animations**: I had this idea while watching a video about how the studio behind everyone's favourite movie Avengers Endgame turned the actor Josh Brolin into Thanos for the big screen. Here is a [link]https://www.youtube.com/watch?v=N2YTmooNR8E&t=166s) to the video.
+**Animations**: I had this idea while watching a video about how the studio behind everyone's favourite movie Avengers Endgame turned the actor Josh Brolin into Thanos for the big screen. Here is a [link](https://www.youtube.com/watch?v=N2YTmooNR8E&t=166s) to the video.
 Seeing how the actors have to wear special body suits so that the camera can track their movements, it got me thinking, how about using Deep Learning to perform the same task. This would reduce the cost of the suits, make it easier for the actors and the crew and given that this system is using AI, it would be more robust to chanegs in body type, build etc. Hence, I came upon this paper and I implemented it in PyTorch. I have shared some demonstrations of the system on some images and videos above.<br>
 **Robotics**: Instead of programming robots to perform specific movements, what if they could track humans around them and learn it from them. How cool would it be?<br>
 **Action Tracking**: I am sure many of you will be familiar with Microsoft Kinect. They released this sensor to allow gamers to interact with their gaming devices and computers using gestures. Using this system, we could perform such tasks without the need of any special devices.<br>
