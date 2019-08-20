@@ -25,7 +25,7 @@ model = model.to(device)
 print(f'Loading the model complete.')
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/thanos_moon.jpg')
+orig_img = cv2.imread('test_images/james-bond.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -175,8 +175,8 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     score_intermed_points = intermed_paf.dot(limb_dir)
                     score_penalizing_long_dist = score_intermed_points.mean() + min(0.5 * upsampled_paf.shape[0] / limb_dist - 1, 0)
                     
-#                    # Criterion 1: At least 80% of the intermediate points have
-#                    # a score higher than thre2
+                    # Criterion 1: At least 80% of the intermediate points have
+                    # a score higher than thre2
 #                    criterion1 = (np.count_nonzero(
 #                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
 #                    # Criterion 2: Mean score, penalized for large limb
@@ -233,6 +233,8 @@ for limb_type in connected_limbs:
 cv2.imshow('img', orig_img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+cv2.imwrite('james_bond_keypoints.png', orig_img)
 
 #def find_people(connected_limbs, joints_list):
 #    """

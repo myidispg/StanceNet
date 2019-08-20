@@ -24,11 +24,7 @@ args = parser.parse_args()
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
-# Some constants to show progress.
-ERASE_LINE = '\x1b[2K'
-CURSOR_UP_ONE = '\x1b[1A'
-
-image_path = args.video_path
+video_path = args.video_path
 
 # If the path has backslashes like in windows, replace with forward slashes
 video_path = video_path.replace('\\', '/')
@@ -114,7 +110,5 @@ while(vid.isOpened()):
             
     out.write(orig_img)
     frames_processed += 1
-#    sys.stdout.write(CURSOR_UP_ONE)
-#    sys.stdout.write(ERASE_LINE)
     
 print(f'The video has been processed and saved at: {output_path}')
