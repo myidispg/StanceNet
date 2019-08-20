@@ -5,8 +5,10 @@ It is currently a work in progress. Most of the code is completed and I only hav
 
 This repository holds the code for my implementation of OpenPose paper. This is currently a work in progress (including this README).
 ## Some results
-[James Bond](https://github.com/myidispg/StanceNet/blob/master/results/james_bond_keypoints.png)
-[People in a market](https://github.com/myidispg/StanceNet/blob/master/results/market.png)
+![James Bond](https://github.com/myidispg/StanceNet/blob/master/results/james_bond_keypoints.png)   
+![People in a market](https://github.com/myidispg/StanceNet/blob/master/results/market.png)
+![Pose Detection on an Action Scene](https://github.com/myidispg/StanceNet/blob/master/readme_media/CaptainvsWinterSoldier_keypoints.gif)<br>
+(Credits to the respective owners. Video downloaded from Youtube)
 
 ## Some pre-requisites
 To download the pre-trained model here: [Dropbox download link](https://www.dropbox.com/sh/47zif4g1bg7i9pl/AADYhpFEZQPbtaBzvZOsOd0ra?dl=0)<br>
