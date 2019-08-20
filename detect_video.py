@@ -11,7 +11,6 @@ import numpy as np
 import cv2
 
 import os
-import sys
 
 from utilities.detect_poses import get_connected_joints, find_joint_peaks
 from utilities.constants import threshold
@@ -54,14 +53,14 @@ try:
 except FileExistsError:
     pass
 
-output_path = os.path.join(os.getcwd(), 'processed_videos', f'{video_name}_keypoints.{extension}')
+output_path = os.path.join(os.getcwd(), 'processed_videos', f'{video_name}_keypoints_1.{extension}')
 print(f'The processed video file will be saved in: {output_path}')
 
 # Now that we have the video name, start the detection process.
 vid = cv2.VideoCapture(video_path)
 
 # Define the codec and create VideoWriter object
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
+fourcc = cv2.VideoWriter_fourcc(*'H264')
 out = cv2.VideoWriter(output_path, fourcc, 20.0,
                       (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
                        int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))))
@@ -71,8 +70,10 @@ total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
 print(f'Video file loaded and working on detecting joints.')
 frames_processed = 0
 while(vid.isOpened()):
-    print(f'Processed {frames_processed} frames out of {total_frames}', end='\r')
+    print(f'Processed {frames_processed} frames out of {total_frames}\n', end='\r')
     ret, orig_img = vid.read()
+    if ret == False:
+        break
     orig_img_shape = orig_img.shape
     img = orig_img.copy()/255
     img = cv2.resize(img, (400, 400))
@@ -110,5 +111,6 @@ while(vid.isOpened()):
             
     out.write(orig_img)
     frames_processed += 1
-    
+
+vid.release()
 print(f'The video has been processed and saved at: {output_path}')
