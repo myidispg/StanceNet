@@ -1,17 +1,19 @@
 # StanceNet
-
 This repository is my implementation of the OpenPose paper in PyTorch. Link to the paper: [Paper](https://arxiv.org/abs/1611.08050)
 The original implementation in Caffe is [here](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation). <br> 
 It is currently a work in progress. Most of the code is completed and I only have to make the parts interactive. It is working for videos as of now.
 
 This repository holds the code for my implementation of OpenPose paper. This is currently a work in progress (including this README).
+## Some results
+[James Bond](https://github.com/myidispg/StanceNet/blob/master/results/james_bond_keypoints.png)
+[People in a market](https://github.com/myidispg/StanceNet/blob/master/results/market.png)
 
-**None**: Download the dataset and put the annotations, train and validation images in the Coco_Dataset directory in the repository directory. The file path should be like this:\
+## Some pre-requisites
+Download the dataset and put the annotations, train and validation images in the Coco_Dataset directory in the repository directory. The file path should be like this:\
 **1: Train images-** `StanceNet/Coco_Dataset/train2017/{images}`\
 **2: Validation images-** `StanceNet/Coco_Dataset/val2017/{images}`\
 **3: Annotations-** `StanceNet/Coco_Dataset/annotations/person_keypoints_train2017.json` and `StanceNet/Coco_Dataset/annotations/person_keypoints_val2017.json`
 
-## Important Note
 To train the model, the dataloader depends upon `pycocotools` which can be installed using `pip install pycocotools`
 
 ## The model architecture
@@ -41,8 +43,10 @@ I sort all the detected connections on the basis of the connection score. The co
 ## Use cases of this system.
 Body Pose Estimations had wide applications in AR, Robotics, Sports, Action Tracking etc.<br>
 **Animations**: I had this idea while watching a video about how the studio behind everyone's favourite movie Avengers Endgame turned the actor Josh Brolin into Thanos for the big screen. Here is a [link]https://www.youtube.com/watch?v=N2YTmooNR8E&t=166s) to the video.
-Seeing how the actors have to wear special body suits so that the camera can track their movements, it got me thinking, how about using Deep Learning to perform the same task. This would reduce the cost of the suits, make it easier for the actors and the crew and given that this system is using AI, it would be more robust to chanegs in body type, build etc. Hence, I came upon this paper and I implemented it in PyTorch. I have shared some demonstrations of the system on some images and videos above. 
-**Robotics**: Instead of programming robots to perform specific movements, what if they could track humans around them and learn it from them. How cool would it be?
-**Action Tracking**: I am sure many of you will be familiar with Microsoft Kinect. They released this sensor to allow gamers to interact with their gaming devices and computers using gestures. Using this system, we could perform such tasks without the need of any special devices.
-**Sports and Fitness**: I am an daily user of the Freeletics BodyWeight Training and Fitness App. They have this system where they show you videos of athletes performing exercises to tell you the correct pousture to maintain while doing an exercise. What if we could use the device's camera to track the pose of the user and tell them where they went wrong? This is very similar to what Google demonstrated with the Dance Like app in I/O 19. 
+Seeing how the actors have to wear special body suits so that the camera can track their movements, it got me thinking, how about using Deep Learning to perform the same task. This would reduce the cost of the suits, make it easier for the actors and the crew and given that this system is using AI, it would be more robust to chanegs in body type, build etc. Hence, I came upon this paper and I implemented it in PyTorch. I have shared some demonstrations of the system on some images and videos above.<br>
+**Robotics**: Instead of programming robots to perform specific movements, what if they could track humans around them and learn it from them. How cool would it be?<br>
+**Action Tracking**: I am sure many of you will be familiar with Microsoft Kinect. They released this sensor to allow gamers to interact with their gaming devices and computers using gestures. Using this system, we could perform such tasks without the need of any special devices.<br>
+**Sports and Fitness**: I am an daily user of the Freeletics BodyWeight Training and Fitness App. They have this system where they show you videos of athletes performing exercises to tell you the correct pousture to maintain while doing an exercise. What if we could use the device's camera to track the pose of the user and tell them where they went wrong? This is very similar to what Google demonstrated with the Dance Like app in I/O 19.<br><br>
+
+Apart from the above mentioned use cases, there are various other applications in the field of medial industry, activity tracking in security etc.
 
