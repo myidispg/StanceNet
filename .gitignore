@@ -5,3 +5,4 @@ MPII_Dataset/*
 *.zip
 trained_models/*
 *.pth
+*mp4

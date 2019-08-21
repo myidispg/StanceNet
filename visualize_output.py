@@ -11,7 +11,8 @@ import numpy as np
 import cv2
 import sys
 
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.filters import gaussian_filter, maximum_filter
+from scipy.ndimage.morphology import generate_binary_structure
 
 from models.paf_model_v2 import StanceNet
 from utilities.constants import threshold, BODY_PARTS
@@ -25,7 +26,7 @@ model = model.to(device)
 print(f'Loading the model complete.')
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/james-bond.jpg')
+orig_img = cv2.imread('test_images/footballers.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -95,7 +96,50 @@ def find_joint_peaks(heatmap, orig_img_shape, threshold):
         joints_list.append(sub_list)
     return joints_list
 
-joints_list = find_joint_peaks(conf, orig_img_shape, threshold)        
+joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
+
+#def find_joint_peaks(heatmap, original_image, threshold):
+#    """
+#    Given a heatmap, find the peaks of the detected joints with 
+#    confidence score > threshold.
+#    Inputs:
+#        heatmap: The heatmaps for all the joints. It is of shape: h, w, num_joints.
+#        orig_img_shape: The shape of the original image: (x, y, num_channels)
+#        threshold: The minimum score for each joint
+#    Output:
+#        A list of the detected joints. There is a sublist for each joint 
+#        type (18 in total) and each sublist contains a tuple with 4 values:
+#        (x, y, confidence score, unique_id). The number of tuples is equal
+#        to the number of joints detected of that type. For example, if there
+#        are 3 nose detected (joint type 0), then there will be 3 tuples in the 
+#        nose sublist            
+#    """
+#    
+#    joints_list = list()
+#    counter = 0
+#    heatmap = cv2.resize(heatmap, (orig_img_shape[1], orig_img_shape[0]),
+#                                    interpolation=cv2.INTER_CUBIC)
+#    for i in range(heatmap.shape[2]-1):
+#        sub_list = list()
+#        joint_map = heatmap[:, :, i]
+#        joint_map = gaussian_filter(joint_map, sigma=3)
+#        
+#        structure = generate_binary_structure(2, 1)
+#        joint_map = (joint_map > 0.01) * joint_map
+#        peaks = maximum_filter(joint_map, footprint=structure) == joint_map
+##        peaks = maximum_filter(joint_map, footprint=np.ones((5, 5))) == joint_map
+#        peaks = peaks * joint_map
+#        y_index, x_index = np.where(peaks != 0)
+#        
+#        for x, y in zip(x_index, y_index):
+#            confidence = joint_map[y, x]
+#            sub_list.append((x, y, confidence, counter))
+#            counter += 1
+#        joints_list.append(sub_list)
+#    
+#    return joints_list
+#        
+#joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
 
 for joint_type in joints_list:
     for tuple_ in joint_type:
@@ -175,27 +219,27 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     score_intermed_points = intermed_paf.dot(limb_dir)
                     score_penalizing_long_dist = score_intermed_points.mean() + min(0.5 * upsampled_paf.shape[0] / limb_dist - 1, 0)
                     
-                    # Criterion 1: At least 80% of the intermediate points have
-                    # a score higher than thre2
-#                    criterion1 = (np.count_nonzero(
-#                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
-#                    # Criterion 2: Mean score, penalized for large limb
-#                    # distances (larger than half the image height), is
-#                    # positive
-#                    criterion2 = (score_penalizing_long_dist > 0)
-#                    if criterion1 and criterion2:
-#                        # Last value is the combined paf(+limb_dist) + heatmap
-#                        # scores of both joints
-#                        connection_candidates.append([joint_src[3], joint_dest[3],
-#                                                      score_penalizing_long_dist,
-#                                                      (x_src, y_src),
-#                                                      (x_dest, y_dest)])
-
-#                    
-                    connection_candidates.append([joint_src[3], joint_dest[3],
+#                   Criterion 1: At least 80% of the intermediate points have
+#                    a score higher than 0.05
+                    criterion1 = (np.count_nonzero(
+                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
+                    # Criterion 2: Mean score, penalized for large limb
+                    # distances (larger than half the image height), is
+                    # positive
+                    criterion2 = (score_penalizing_long_dist > 0)
+                    if criterion1 and criterion2:
+                        # Last value is the combined paf(+limb_dist) + heatmap
+                        # scores of both joints
+                        connection_candidates.append([joint_src[3], joint_dest[3],
                                                       score_penalizing_long_dist,
                                                       (x_src, y_src),
                                                       (x_dest, y_dest)])
+
+#                    
+#                    connection_candidates.append([joint_src[3], joint_dest[3],
+#                                                      score_penalizing_long_dist,
+#                                                      (x_src, y_src),
+#                                                      (x_dest, y_dest)])
                     
 #            Sort the connections based on their score_penalizing_long_distance
 #            Key is used to specify which element to consider while sorting.
@@ -234,7 +278,7 @@ cv2.imshow('img', orig_img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-cv2.imwrite('james_bond_keypoints.png', orig_img)
+cv2.imwrite('readme_media/footballers.png', orig_img)
 
 #def find_people(connected_limbs, joints_list):
 #    """

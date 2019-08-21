@@ -24,12 +24,8 @@ args = parser.parse_args()
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
 video_path = args.video_path
-
 # If the path has backslashes like in windows, replace with forward slashes
 video_path = video_path.replace('\\', '/')
-video_path = os.path.normpath(video_path)
-
-video_path = os.path.join(os.getcwd(), video_path)
 
 if os.path.exists(video_path):
     pass
@@ -53,7 +49,7 @@ try:
 except FileExistsError:
     pass
 
-output_path = os.path.join(os.getcwd(), 'processed_videos', f'{video_name}_keypoints_1.{extension}')
+output_path = os.path.join(os.getcwd(), 'processed_videos', f'{video_name}_keypoints.{extension}')
 print(f'The processed video file will be saved in: {output_path}')
 
 # Now that we have the video name, start the detection process.
