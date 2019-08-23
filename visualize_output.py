@@ -15,7 +15,7 @@ from scipy.ndimage.filters import gaussian_filter, maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure
 
 from models.paf_model_v2 import StanceNet
-from utilities.constants import threshold, BODY_PARTS
+from utilities.constants import threshold, BODY_PARTS, num_joints
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
@@ -26,7 +26,7 @@ model = model.to(device)
 print(f'Loading the model complete.')
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/footballers.jpg')
+orig_img = cv2.imread('test_images/market.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -221,13 +221,13 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     
 #                   Criterion 1: At least 80% of the intermediate points have
 #                    a score higher than 0.05
-                    criterion1 = (np.count_nonzero(
-                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
-                    # Criterion 2: Mean score, penalized for large limb
-                    # distances (larger than half the image height), is
-                    # positive
+#                    criterion1 = (np.count_nonzero(
+#                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
+##                     Criterion 2: Mean score, penalized for large limb
+##                     distances (larger than half the image height), is
+##                     positive
                     criterion2 = (score_penalizing_long_dist > 0)
-                    if criterion1 and criterion2:
+                    if criterion2:
                         # Last value is the combined paf(+limb_dist) + heatmap
                         # scores of both joints
                         connection_candidates.append([joint_src[3], joint_dest[3],
@@ -280,17 +280,125 @@ cv2.destroyAllWindows()
 
 cv2.imwrite('readme_media/footballers.png', orig_img)
 
-#def find_people(connected_limbs, joints_list):
-#    """
-#    Takes in the joints and the limbs lists detected in previous step to combine
-#    limbs of a single person into a single list.
-#    """
-#    
-#    people = []
-#    
-#    for limb_type in range(len(BODY_PARTS)):
+def find_people(connected_limbs, joints_list):
+    """
+    Associate limbs belonging to the same person together.
+    Inputs:
+        connected_limbs: The limbs outputs of the get_connected_joints()
+        joints_list: An unraveled list of all the joints.
+    Outputs:
+        people: 2d np.array of size num_people x (NUM_JOINTS+2). For each person found:
+            # First NUM_JOINTS columns contain the index (in joint_list) of the
+            joints associated with that person (or -1 if their i-th joint wasn't found)
+            # 2nd last column: Overall score of the joints+limbs that belong
+            to this person.
+            # Last column: Total count of joints found for this person
+        
+    """
+    
+    people = list()
+    
+    for limb_type in range(len(BODY_PARTS)): # Detected limb of a type
+        joint_src_type, joint_dest_type = BODY_PARTS[limb_type]
+#        print(f'src: {joint_src_type}, dest: {joint_dest_type}')
+        
+        for limbs_of_type in connected_limbs[limb_type]: # All limbs detected of a type
+            person_assoc_idx = list()
+            for person, person_limbs in enumerate(people): # Find all people who can be associated.
+                if limbs_of_type[0] == person_limbs[joint_src_type] or limbs_of_type[1] == person_limbs[joint_dest_type]:
+                    person_assoc_idx.append(person)
+                    
+            # If one of the joints has been associated to a person, and either
+            # the other joint is also associated with the same person or not
+            # associated to anyone yet:
+            if len(person_assoc_idx) == 1:
+                person_limbs = people[person_assoc_idx[0]]
+                # If the other joint is not associated not yet
+                if person_limbs[joint_dest_type] != limbs_of_type[1]:
+                    # Associate with current person
+                    person_limbs[joint_dest_type] = limbs_of_type[1]
+                    # Increase the number of limbs associated to this person
+                    person_limbs[-1] += 1
+                    # And update the total score (+= heatmap score of joint_dst
+                    # + score of connecting joint_src with joint_dst)
+                    person_limbs[-2] += joints_list[limbs_of_type[1], 2] + limbs_of_type[2]
+            elif len(person_assoc_idx) == 2: # if found 2 and disjoint, merge them
+                person1_limbs = people[person_assoc_idx[0]]
+                person2_limbs = people[person_assoc_idx[1]]
+                membership = ((person1_limbs >= 0) & (person2_limbs >= 0))[:-2]
+                if not membership.any(): # If both people have no same joints connected, merge them into a single person
+                    # Update which joints are connected
+                    person1_limbs[:-2] += (person2_limbs[:-2] + 1)
+                    # Update the overall score and total count of joints
+                    # connected by summing their counters
+                    person1_limbs[-2:] += person2_limbs[-2:]
+                    # Add the score of the current joint connection to the 
+                    # overall score
+                    person1_limbs[-2] += limbs_of_type[2]
+                    people.pop(person_assoc_idx[1])
+                else: # Same case as len(person_assoc_idx)==1 above
+                    person1_limbs[joint_dest_type] = limbs_of_type[1]
+                    person1_limbs[-1] += 1
+                    person1_limbs[-2] += joints_list[limbs_of_type[1], 2] + limbs_of_type[2]
+            else: # No person has claimed any of these joints, create a new person
+                # Initialize person info to all -1 (no joint associations)
+                row = -1 * np.ones(num_joints + 2)
+                # Store the joint info of new connection
+                row[joint_src_type] = limbs_of_type[0]
+                row[joint_dest_type] = limbs_of_type[1]
+                # Total count of conencted joints for this person: 2
+                row[-1] = 2
+                # Compute overall score: score joint_src + score joint_dst + score connection
+                # {joint_src,joint_dst}
+                row[-2] = sum(joints_list[limbs_of_type[:2], 2]
+                              ) + limbs_of_type[2]
+                people.append(row)
+            
+                
+    # Delete people who have very few parts connected
+    people_to_delete = []
+    for person_id, person_info in enumerate(people):
+        if person_info[-1] < 3 or person_info[-2] / person_info[-1] < 0.2:
+            people_to_delete.append(person_id)
+    
+    # Traverse the list in reverse order so we delete indices starting from the
+    # last one (otherwise, removing item for example 0 would modify the indices of
+    # the remaining people to be deleted!)
+    for index in people_to_delete[::-1]:
+        people.pop(index)
+    
+    # Appending items to a np.array can be very costly (allocating new memory, copying over the array, then adding new row)
+    # Instead, we treat the set of people as a list (fast to append items) and
+    # only convert to np.array at the end
+    return np.array(people)
+
+joint_list_unraveled = np.array([tuple(peak) + (joint_type,) for joint_type,
+                                                           joint_peaks in enumerate(joints_list) for peak
+                           in joint_peaks])
+
+people = find_people(connected_limbs, joint_list_unraveled)
+                
+                    
+                
+        
+#        if len(limb_type) > 0: # Proceed if limb are detected.
+#            for limb in limb_type: # For each limb of the type
+#                # Handle the beginning case
+#                if len(people) == 0:
+#                    people.append(([limb[0], limb[1]], limb))
+#                count = 0 # Keep a count of the detected people.
+#                for person in people: 
+#                    
+                
+    return people
+            
         
         
+people = find_people(connected_limbs, joints_list)
+
+for limb_type in range(18):
+    for person_joint_info in people:
+        print(f'limb: {limb_type}, person: {person_joint_info}')
 
 # ------ Work on video--------
 ERASE_LINE = '\x1b[2K'
