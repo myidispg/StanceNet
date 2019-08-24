@@ -14,35 +14,26 @@ from scipy.ndimage.filters import gaussian_filter, maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure
 
 from models.paf_model_v2 import StanceNet
-from utilities.constants import threshold, BODY_PARTS, num_joints
+from utilities.constants import threshold, BODY_PARTS, num_joints, img_size
 
 class PoseDetect():
     
-    def __init__(self, img, model_path, use_gpu=True):
-        self.img = img # Img is numpy array
-        self.orig_img = img # Keep a copy
-        self.orig_img_shape = img.shape
+    def __init__(self, model_path):
+#        self.img = img # Img is numpy array
+#        self.orig_img = img # Keep a copy
+#        self.orig_img_shape = img.shape
         print('Loading pre-trained model now.')
         self.model = StanceNet(18, 38).eval()        
         self.model.load_state_dict(torch.load(model_path))
         print('Model loaded.')
         
         # Turn into PyTorch tensor, add batch size dimension and permute to required shape
-        self.img = torch.from_numpy(self.img).view(1,
-                                   self.img.shape[0],
-                                   self.img.shape[1],
-                                   self.img.shape[2]).permute(0, 3, 1, 2)
+#        self.img = torch.from_numpy(self.img).view(1,
+#                                   self.img.shape[0],
+#                                   self.img.shape[1],
+#                                   self.img.shape[2]).permute(0, 3, 1, 2)
         
-        if use_gpu:
-            if torch.cuda.is_available():
-                device = torch.device('cuda')
-                self.model = self.model.to(device)
-                self.img = self.img.to(device)
-            else:
-                print('No GPU available. Proceeding on CPU')
-        
-                
-    def find_joint_peaks(heatmap, orig_img_shape):
+    def find_joint_peaks(self, heatmap, orig_img_shape):
         """
         Given a heatmap, find the peaks of the detected joints with 
         confidence score > threshold.
@@ -89,7 +80,7 @@ class PoseDetect():
             joints_list.append(sub_list)
         return joints_list
     
-    def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
+    def get_connected_joints(self, upsampled_paf, joints_list, num_inter_pts = 10):
         """
         For every type of limb (eg: forearm, shin, etc.), look for every potential
         pair of joints (eg: every wrist-elbow combination) and evaluate the PAFs to
@@ -154,20 +145,20 @@ class PoseDetect():
     ##                     Criterion 2: Mean score, penalized for large limb
     ##                     distances (larger than half the image height), is
     ##                     positive
-                        criterion2 = (score_penalizing_long_dist > 0)
+                        criterion2 = (score_penalizing_long_dist > -0.01)
                         if criterion1 and criterion2:
-                            # Last value is the combined paf(+limb_dist) + heatmap
+#                            # Last value is the combined paf(+limb_dist) + heatmap
                             # scores of both joints
                             connection_candidates.append([joint_src[3], joint_dest[3],
                                                           score_penalizing_long_dist,
                                                           (x_src, y_src),
                                                           (x_dest, y_dest)])
-    
+#    
     #                    
-    #                    connection_candidates.append([joint_src[3], joint_dest[3],
-    #                                                      score_penalizing_long_dist,
-    #                                                      (x_src, y_src),
-    #                                                      (x_dest, y_dest)])
+#                        connection_candidates.append([joint_src[3], joint_dest[3],
+#                                                          score_penalizing_long_dist,
+#                                                          (x_src, y_src),
+#                                                          (x_dest, y_dest)])
                         
     #            Sort the connections based on their score_penalizing_long_distance
     #            Key is used to specify which element to consider while sorting.
@@ -190,7 +181,7 @@ class PoseDetect():
                 connected_limbs.append(connection)
         return connected_limbs
     
-    def find_people(connected_limbs, joints_list):
+    def find_people(self, connected_limbs, joints_list):
         """
         Associate limbs belonging to the same person together.
         Inputs:
@@ -268,7 +259,7 @@ class PoseDetect():
         # Delete people who have very few parts connected
         people_to_delete = []
         for person_id, person_info in enumerate(people):
-            if person_info[-1] < 3 or person_info[-2] / person_info[-1] < 0.2:
+            if person_info[-1] < 2 or person_info[-2] / person_info[-1] < 0.2:
                 people_to_delete.append(person_id)
         
         # Traverse the list in reverse order so we delete indices starting from the
@@ -282,8 +273,91 @@ class PoseDetect():
         # only convert to np.array at the end
         return np.array(people)
     
-    def plot_poses(self, people, joint_list_unraveled):
+    def plot_poses(self, img, people, joints_list_unraveled):
+        # Copy the image
+        img_copy = img.copy()
         
+        for person_joint_info in people: # For person in all people
+            for limb_type in range(len(BODY_PARTS)): # For each limb in possible types.
+                limb_src_index, limb_dest_index = BODY_PARTS[limb_type] # Get the index of src and destination joints
+                # Index of src joint for limb in unraveled list
+                src_joint_index_joints_list = int(person_joint_info[limb_src_index])
+                # Index of dest joitn fot limb in unraveled list
+                dest_joint_index_joints_list = int(person_joint_info[limb_dest_index])
+                if src_joint_index_joints_list == -1 or dest_joint_index_joints_list == -1:
+                    continue
+                
+                joint_src = int(joints_list_unraveled[src_joint_index_joints_list][0]), int(joints_list_unraveled[src_joint_index_joints_list][1])
+                joint_dest = int(joints_list_unraveled[dest_joint_index_joints_list][0]), int(joints_list_unraveled[dest_joint_index_joints_list][1])
+                
+                # Draw the joints by a circle
+                # Circle for source
+                cv2.circle(img_copy, joint_src, 2, (255, 0, 0))
+                # Circle for dest
+                cv2.circle(img_copy, joint_dest, 2, (255, 0, 0))
+                
+                # Draw the limbs
+                cv2.line(img_copy, joint_src, joint_dest, (0, 255, 0), 2)
+                
+        return img_copy
         
+    
+    def detect_poses(self, img, use_gpu=True):
+        
+        # Keep a copy of the original image
+        orig_img = img.copy()
+        
+        img = cv2.resize(img/255, (img_size, img_size))
+        
+        # Turn into Torch tensor and add an extra dimension for batch size.
+        img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1],
+                                         img.shape[2]).permute(0, 3, 1, 2).float()
+        
+        if use_gpu:
+            if torch.cuda.is_available():
+                device = torch.device('cuda')
+                self.model = self.model.to(device)
+                img = img.to(device)
+            else:
+                print('No GPU available. Proceeding on CPU')
+        
+        # Do a forward pass through the model
+        paf, conf = self.model(img)
+        
+        paf = paf.cpu().detach().numpy()
+        conf = conf.cpu().detach().numpy()
+        # Remove the extra dimension of batch size
+        conf = np.squeeze(conf.transpose(2, 3, 1, 0))
+        paf = np.squeeze(paf.transpose(2, 3, 1, 0))
+    
+        # For drawing, use the image converted to Torch Tensor and convert back to numpy. 
+        img = img.cpu().detach().numpy()
+        img = np.squeeze(img).transpose(1, 2, 0)
+        
+        joints_list = self.find_joint_peaks(conf, (orig_img.shape))
 
-            
+        # Upsample the PAFs and get limbs
+        paf = cv2.resize(paf, (orig_img.shape[1], orig_img.shape[0]))
+        connected_limbs = self.get_connected_joints(paf, joints_list)
+        
+        # Unravel the joints list.
+        joints_list_unraveled = np.array([tuple(peak) + (joint_type,) for joint_type,
+                                         joint_peaks in enumerate(joints_list) for peak
+                                         in joint_peaks])
+        # Find people
+        people = self.find_people(connected_limbs, joints_list_unraveled)
+        
+        img_with_poses = self.plot_poses(orig_img, people, joints_list_unraveled)
+        
+        return img_with_poses
+        
+        
+#detect = PoseDetect('trained_models/trained_model.pth')
+##img = cv2.imread('test_images/thanos_moon.jpg')
+#img = cv2.imread('Coco_Dataset/val2017/000000012670.jpg')
+##conf = detect.detect_poses(img, True)
+#img = detect.detect_poses(img, True)
+#
+#cv2.imshow('img', img.astype(np.uint8))
+#cv2.waitKey(0)
+#cv2.destroyAllWindows()

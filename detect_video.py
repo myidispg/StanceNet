@@ -12,10 +12,10 @@ import cv2
 
 import os
 
-from utilities.detect_poses import get_connected_joints, find_joint_peaks
 from utilities.constants import threshold
 
 from models.paf_model_v2 import StanceNet
+from pose_detect import PoseDetect
 
 parser = argparse.ArgumentParser()
 parser.add_argument('video_path', type=str, help='The path to the video file.')
@@ -33,11 +33,13 @@ else:
     print('No such path or file exists. Please check.')
     exit()
     
-print('Loading the pre-trained model')
-model = StanceNet(18, 38).eval()
-model.load_state_dict(torch.load('trained_models/trained_model.pth'))
-model = model.to(device)
-print(f'Loading the model complete.')
+detect = PoseDetect('trained_models/trained_model.pth')
+
+#print('Loading the pre-trained model')
+#model = StanceNet(18, 38).eval()
+#model.load_state_dict(torch.load('trained_models/trained_model.pth'))
+#model = model.to(device)
+#print(f'Loading the model complete.')
 
 # now, break the path into components
 path_components = video_path.split('/')
@@ -57,7 +59,7 @@ vid = cv2.VideoCapture(video_path)
 
 # Define the codec and create VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*'H264')
-out = cv2.VideoWriter(output_path, fourcc, 20.0,
+out = cv2.VideoWriter(output_path, fourcc, 29.90,
                       (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
                        int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
@@ -70,43 +72,46 @@ while(vid.isOpened()):
     ret, orig_img = vid.read()
     if ret == False:
         break
-    orig_img_shape = orig_img.shape
-    img = orig_img.copy()/255
-    img = cv2.resize(img, (400, 400))
-    # Convert the frame to a torch tensor
-    img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).permute(0, 3, 1, 2)
-    img = img.to(device).float()
-    # Get the model's output
-    paf, conf = model(img)
-    # Convert back to numpy
-    paf = paf.cpu().detach().numpy()
-    conf = conf.cpu().detach().numpy()
-    # Remove the extra dimension of batch size
-    conf = np.squeeze(conf.transpose(2, 3, 1, 0))
-    paf = np.squeeze(paf.transpose(2, 3, 1, 0))
-
-    # Get the joints
-    joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
-    # Draw joints on the orig_img
-    for joint_type in joints_list:
-        for tuple_ in joint_type:
-            x_index = tuple_[0]
-            y_index = tuple_[1]
-            cv2.circle(orig_img, (x_index, y_index), 3, (255, 0, 0))
-            
-    # Upsample the paf
-    paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
-    # Get the connected limbs
-    connected_limbs = get_connected_joints(paf_upsampled, joints_list)
-    
-    # Draw the limbs too.
-    for limb_type in connected_limbs:   
-        for limb in limb_type:
-            src, dest = limb[3], limb[4]
-            cv2.line(orig_img, src, dest, (0, 255, 0), 2)
+#    orig_img_shape = orig_img.shape
+#    img = orig_img.copy()/255
+#    img = cv2.resize(img, (400, 400))
+#    # Convert the frame to a torch tensor
+#    img = torch.from_numpy(img).view(1, img.shape[0], img.shape[1], img.shape[2]).permute(0, 3, 1, 2)
+#    img = img.to(device).float()
+#    # Get the model's output
+#    paf, conf = model(img)
+#    # Convert back to numpy
+#    paf = paf.cpu().detach().numpy()
+#    conf = conf.cpu().detach().numpy()
+#    # Remove the extra dimension of batch size
+#    conf = np.squeeze(conf.transpose(2, 3, 1, 0))
+#    paf = np.squeeze(paf.transpose(2, 3, 1, 0))
+#
+#    # Get the joints
+#    joints_list = find_joint_peaks(conf, orig_img_shape, threshold)
+#    # Draw joints on the orig_img
+#    for joint_type in joints_list:
+#        for tuple_ in joint_type:
+#            x_index = tuple_[0]
+#            y_index = tuple_[1]
+#            cv2.circle(orig_img, (x_index, y_index), 3, (255, 0, 0))
+#            
+#    # Upsample the paf
+#    paf_upsampled = cv2.resize(paf, (orig_img_shape[1], orig_img_shape[0]))
+#    # Get the connected limbs
+#    connected_limbs = get_connected_joints(paf_upsampled, joints_list)
+#    
+#    # Draw the limbs too.
+#    for limb_type in connected_limbs:   
+#        for limb in limb_type:
+#            src, dest = limb[3], limb[4]
+#            cv2.line(orig_img, src, dest, (0, 255, 0), 2)
+        
+    orig_img = detect.detect_poses(orig_img, use_gpu=True)
             
     out.write(orig_img)
     frames_processed += 1
 
 vid.release()
+out.release()
 print(f'The video has been processed and saved at: {output_path}')

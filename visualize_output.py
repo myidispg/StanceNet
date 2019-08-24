@@ -26,7 +26,7 @@ model = model.to(device)
 print(f'Loading the model complete.')
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/footballers.jpg')
+orig_img = cv2.imread('test_images/trinity.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -42,6 +42,8 @@ paf, conf = model(img)
 
 paf = paf.cpu().detach().numpy()
 conf = conf.cpu().detach().numpy()
+
+print(conf.shape)
 
 # Remove the extra dimension of batch size
 conf = np.squeeze(conf.transpose(2, 3, 1, 0))
