@@ -26,7 +26,7 @@ model = model.to(device)
 print(f'Loading the model complete.')
 
 #img = cv2.imread(os.path.join('Coco_Dataset', 'val2017', '000000008532.jpg'))
-orig_img = cv2.imread('test_images/market.jpg')
+orig_img = cv2.imread('test_images/footballers.jpg')
 orig_img_shape = orig_img.shape
 img = orig_img.copy()/255
 img = cv2.resize(img, (400, 400))
@@ -221,13 +221,13 @@ def get_connected_joints(upsampled_paf, joints_list, num_inter_pts = 10):
                     
 #                   Criterion 1: At least 80% of the intermediate points have
 #                    a score higher than 0.05
-#                    criterion1 = (np.count_nonzero(
-#                        score_intermed_points > 0.05) > 0.8 * num_inter_pts)
+                    criterion1 = (np.count_nonzero(
+                        score_intermed_points > 0.02) > 0.5 * num_inter_pts)
 ##                     Criterion 2: Mean score, penalized for large limb
 ##                     distances (larger than half the image height), is
 ##                     positive
                     criterion2 = (score_penalizing_long_dist > 0)
-                    if criterion2:
+                    if criterion1 and criterion2:
                         # Last value is the combined paf(+limb_dist) + heatmap
                         # scores of both joints
                         connection_candidates.append([joint_src[3], joint_dest[3],
@@ -288,7 +288,7 @@ def find_people(connected_limbs, joints_list):
         joints_list: An unraveled list of all the joints.
     Outputs:
         people: 2d np.array of size num_people x (NUM_JOINTS+2). For each person found:
-            # First NUM_JOINTS columns contain the index (in joint_list) of the
+            # First NUM_JOINTS columns contain the index (in joints_list) of the
             joints associated with that person (or -1 if their i-th joint wasn't found)
             # 2nd last column: Overall score of the joints+limbs that belong
             to this person.
@@ -378,27 +378,34 @@ joint_list_unraveled = np.array([tuple(peak) + (joint_type,) for joint_type,
 
 people = find_people(connected_limbs, joint_list_unraveled)
                 
-                    
-                
-        
-#        if len(limb_type) > 0: # Proceed if limb are detected.
-#            for limb in limb_type: # For each limb of the type
-#                # Handle the beginning case
-#                if len(people) == 0:
-#                    people.append(([limb[0], limb[1]], limb))
-#                count = 0 # Keep a count of the detected people.
-#                for person in people: 
-#                    
-                
-    return people
-            
-        
-        
-people = find_people(connected_limbs, joints_list)
 
-for limb_type in range(18):
-    for person_joint_info in people:
-        print(f'limb: {limb_type}, person: {person_joint_info}')
+for person_joint_info in people: # For person in all people
+    for limb_type in range(len(BODY_PARTS)): # For each limb in possible types.
+        limb_src_index, limb_dest_index = BODY_PARTS[limb_type] # Get the index of src and destination joints
+#        print(f'Person: {person_joint_info}, src: {limb_src_index}, dest: {limb_dest_index}')
+        # Index of src joint for limb in unraveled list
+        src_joint_index_joints_list = int(person_joint_info[limb_src_index])
+        # Index of dest joitn fot limb in unraveled list
+        dest_joint_index_joints_list = int(person_joint_info[limb_dest_index])
+        if src_joint_index_joints_list == -1 or dest_joint_index_joints_list == -1:
+            continue
+        
+        joint_src = int(joint_list_unraveled[src_joint_index_joints_list][0]), int(joint_list_unraveled[src_joint_index_joints_list][1])
+        joint_dest = int(joint_list_unraveled[dest_joint_index_joints_list][0]), int(joint_list_unraveled[dest_joint_index_joints_list][1])
+        
+        # Draw the joints by a circle
+        # Circle for source
+        cv2.circle(orig_img, joint_src, 2, (255, 0, 0))
+        # Circle for dest
+        cv2.circle(orig_img, joint_dest, 2, (255, 0, 0))
+        
+        # Draw the limbs
+        cv2.line(orig_img, joint_src, joint_dest, (0, 255, 0), 2)
+        
+        
+cv2.imshow('img', orig_img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 # ------ Work on video--------
 ERASE_LINE = '\x1b[2K'
