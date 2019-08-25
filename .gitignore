@@ -5,4 +5,7 @@ MPII_Dataset/*
 *.zip
 trained_models/*
 *.pth
-*mp4
+*.mp4
+test_images/*
+processed_images/*
+processed_videos/*

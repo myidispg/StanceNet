@@ -141,11 +141,11 @@ class PoseDetect():
     #                   Criterion 1: At least 80% of the intermediate points have
     #                    a score higher than 0.05
                         criterion1 = (np.count_nonzero(
-                            score_intermed_points > 0.02) > 0.5 * num_inter_pts)
-    ##                     Criterion 2: Mean score, penalized for large limb
-    ##                     distances (larger than half the image height), is
-    ##                     positive
-                        criterion2 = (score_penalizing_long_dist > -0.01)
+                            score_intermed_points > 0.00) > 0.3 * num_inter_pts)
+    #                     Criterion 2: Mean score, penalized for large limb
+    #                     distances (larger than half the image height), is
+    #                     positive
+                        criterion2 = (score_penalizing_long_dist > 0)
                         if criterion1 and criterion2:
 #                            # Last value is the combined paf(+limb_dist) + heatmap
                             # scores of both joints
@@ -154,7 +154,7 @@ class PoseDetect():
                                                           (x_src, y_src),
                                                           (x_dest, y_dest)])
 #    
-    #                    
+                        
 #                        connection_candidates.append([joint_src[3], joint_dest[3],
 #                                                          score_penalizing_long_dist,
 #                                                          (x_src, y_src),
