@@ -7,5 +7,3 @@ trained_models/*
 *.pth
 *.mp4
 test_images/*
-processed_images/*
-processed_videos/*
