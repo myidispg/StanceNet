@@ -42,8 +42,6 @@ def adjust_keypoints(keypoints, original_shape):
           sub_list.append(int((keypoints[list_][i]/original_shape[0]) * img_size))
           sub_list.append(int((keypoints[list_][i+1]/original_shape[1]) * img_size))
           sub_list.append(keypoints[list_][i+2])
-#      sub_list[i] = int((keypoints[list_][i]/original_shape[0]) * img_size)
-#      keypoints[list_][i+1] = int((keypoints[list_][i+1]/original_shape[1]) * img_size)
       new_keypoints.append(sub_list)
       
   # Change the arrangement of the keypoints to map the new schema
